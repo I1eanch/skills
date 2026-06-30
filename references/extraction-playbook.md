@@ -1,6 +1,6 @@
-# GitHub Solution Extraction Playbook
+# PavedPath Code Extraction Playbook
 
-Use this playbook after GitHub evidence or repository candidates have been found. The goal is to turn projects, issues, PRs, code, examples, releases, and docs into a local solution for the user's specific problem.
+Use this playbook after GitHub evidence or repository candidates have been found. The goal is to turn open-source projects, issues, PRs, code, examples, releases, and docs into a local solution for the user's specific software engineering problem.
 
 ## Read in This Order
 
@@ -29,10 +29,12 @@ For each strong evidence item, identify:
 
 The local recommendation should say:
 
-- reuse: the existing GitHub project's workflow, API, config, example, or operational pattern that should remain intact;
+- reuse: the existing open-source workflow, API, config, example, or operational pattern that should remain intact;
 - adapt: only the version, framework, runtime, deployment, data, auth, interface, or scale differences required by the user's local problem;
 - avoid: adjacent fixes, old workarounds, unsafe patches, large architecture copies, heavy rewrites of the upstream solution, or unverified suggestions;
 - verify: the exact command, request, test, or check required before claiming the problem is solved.
+
+For browser/adapter fixes that build a JavaScript string for `page.evaluate`, validate both layers: run the outer file syntax check and instantiate/parse the generated script (for example, import the test helper and run `new Function(buildScript(...))`) before live browser verification. Outer syntax checks alone do not catch broken escaping inside generated scripts.
 
 When a repository itself is a candidate solution, include a compact table in the answer with repo, Stars, forks, language, license, activity, basic content, fit, and local adaptation. When the strongest evidence is an issue/PR/code example rather than a reusable project, the project table is optional.
 
@@ -51,7 +53,7 @@ The final answer should include a subagent trace with each subagent's scope, evi
 - Copying a patch without license and compatibility awareness.
 - Rewriting a mature solution instead of adapting its public workflow to the local codebase.
 - Recommending a workaround when a released fix exists.
-- Claiming GitHub evidence exists without direct links to the relevant issue, PR, code, example, or release.
+- Claiming open-source evidence exists without direct links to the relevant issue, PR, code, example, or release.
 - Passing tokens, cookies, private repository contents, sensitive logs, secrets, production data, or credentials to subagents.
 
 ## Evidence Standard

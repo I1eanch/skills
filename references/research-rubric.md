@@ -1,6 +1,6 @@
-# Problem and Project Evidence Rubric
+# PavedPath Code Evidence Rubric
 
-Use this rubric when ranking GitHub evidence for a concrete engineering problem or a repository-level solution. The score is a decision aid, not a replacement for judgment.
+Use this rubric when ranking GitHub and open-source evidence for a concrete software engineering problem or a repository-level solution. The score is a decision aid, not a replacement for judgment.
 
 ## Default Score: 100 points
 

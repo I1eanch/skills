@@ -1,9 +1,9 @@
 <!-- markdownlint-disable MD013 MD033 -->
 
-<h1 align="center">GitHub Solution Research</h1>
+<h1 align="center">PavedPath Code</h1>
 
 <p align="center">
-  A Codex skill for turning concrete engineering blockers into GitHub-backed evidence, repository comparisons, and local implementation plans.
+  PavedPath Code（代码版）is a Codex skill for finding proven implementation paths from GitHub and open-source evidence, then adapting them to local software engineering problems.
 </p>
 
 <p align="center">
@@ -11,11 +11,14 @@
   ·
   <a href="#english">English</a>
   ·
+  <a href="#migration">Migration</a>
+  ·
   <a href="#license">License</a>
 </p>
 
 <p align="center">
   <img alt="Codex skill" src="https://img.shields.io/badge/Codex-skill-111827?style=flat-square">
+  <img alt="PavedPath Code" src="https://img.shields.io/badge/PavedPath-Code-7c3aed?style=flat-square">
   <img alt="GitHub CLI first" src="https://img.shields.io/badge/GitHub%20CLI-first-0969da?style=flat-square">
   <img alt="License MIT" src="https://img.shields.io/badge/license-MIT-green?style=flat-square">
   <img alt="Status public skill" src="https://img.shields.io/badge/status-public%20skill-blue?style=flat-square">
@@ -23,9 +26,11 @@
 
 > **Status boundary / 状态边界**
 >
-> This repository packages a Codex skill for GitHub-backed engineering solution research. It uses GitHub CLI first, keeps subagent research conditional, and requires evidence-backed output. It is not an automatic fixer, not a vulnerability scanner, and not a guarantee that GitHub contains the answer.
+> PavedPath Code is the code-focused edition of PavedPath. It helps agents solve software engineering problems by finding proven implementation paths from GitHub repositories, issues, pull requests, discussions, code examples, release notes, and open-source evidence.
 >
-> 本仓库打包的是一个用于 GitHub 证据研究的 Codex skill。新版流程以 GitHub CLI 为默认入口，子代理只在适合时条件触发，并要求输出可核验的证据闭环。它不是自动修复器，不是漏洞扫描器，也不保证 GitHub 一定有答案。
+> PavedPath Code（代码版）用于解决代码、工程、依赖、构建、部署、集成、API 使用等问题。它不是泛泛搜索 GitHub，而是从开源项目、issue、PR、示例、release notes 等证据中找到已经被验证过的实现路径，再转译成本地可执行方案。
+>
+> This repository is not the future general-purpose PavedPath. Non-code life decisions, self-media workflows, study methods, consumer decisions, and broad research tasks are out of scope here.
 
 ## 友链 / Community
 
@@ -35,51 +40,51 @@
 
 ### 项目定位
 
-GitHub Solution Research 是一个可独立安装的 Codex skill，用于把具体工程问题转化为有证据的 GitHub 开源研究流程：搜索公开仓库、issue、PR、discussion、代码、示例和 release notes，比较候选项目，再把可复用模式落到本地修复、实现方案或验证计划中。
+PavedPath Code（代码版）帮助 Agent 避免为代码问题重复造轮子。它先定义本地工程问题，再用 GitHub 和开源证据寻找已经被走通的路径：成熟项目、issue、PR、discussion、代码、示例、release notes 和官方项目文档。最后，它把最强证据转译为本地最小适配、验证命令和风险边界。
 
-它适合处理“这个问题别人是否已经在开源项目里解决过”的场景。它不适合替代本地调试、官方文档核对、代码审查或安全审计，也不应该被用来复制私有仓库、token、cookie、凭证、敏感日志、production data 或大段第三方代码。
+它不是“搜索 GitHub 链接”的工具。GitHub 是主要证据源，目标是找到开源世界已经验证过的实现路径，并判断这条路径是否适合当前代码库。
+
+### 适用范围
+
+适合使用 PavedPath Code：
+
+- bug、runtime error、build/test/deploy failure；
+- dependency、SDK、framework、API usage 或 integration blocker；
+- 需要寻找实现模式、配置形态、测试夹具、迁移路径或工具/库选型；
+- 需要比较多个开源项目，并说明 Stars、license、活跃度、适配成本和风险；
+- 需要从 issue、PR、release notes、示例代码或测试中提取可落地的修复模式；
+- 需要回答“这个工程问题在开源世界是否已有可验证路径”。
+
+不要用于：
+
+- 文案、小型本地重构、或代码库已经明确给出答案的改动；
+- 非代码问题、生活问题、自媒体工作流、学习方法、消费决策等未来通用版 PavedPath 才应覆盖的场景；
+- 用户明确禁止联网或 GitHub 研究的任务；
+- 未获授权的私有仓库、凭证、cookie、token、公司内部代码、敏感日志、production data 或不可公开上下文；
+- 生产事故尚未完成本地日志、运行状态和官方文档核对时，用开源搜索替代现场排障。
 
 ### Features
 
 | 能力 | 已包含内容 | 边界 |
 | --- | --- | --- |
-| GitHub CLI first | 默认使用 `gh search repos`、`gh search issues`、`gh search prs`、`gh search code`、`gh repo view`、`gh pr view`、`gh issue view` 和 `gh api` | 不再依赖仓库内置 Python 搜索脚本；`gh` 结果仍需深读和本地验证 |
+| GitHub CLI first | 默认使用 `gh search repos`、`gh search issues`、`gh search prs`、`gh search code`、`gh repo view`、`gh pr view`、`gh issue view` 和 `gh api` | 不依赖仓库内置搜索脚本；`gh` 结果仍需深读和本地验证 |
 | 问题证据搜索 | 围绕错误文本、包名、API 名、版本号、配置键、框架和失败命令搜索 issues、PRs、code、examples、release notes | 只把 GitHub 当证据来源，不把链接数量或 Stars 当成结论 |
 | 仓库候选研究 | 按问题匹配、Stars、license、活跃度、示例质量和适配成本比较公开仓库 | Stars 是成熟度信号，不会覆盖 maintainer evidence、merged PR、official examples 或可复现代码 |
 | 条件子代理研究 | 当问题跨多个生态、查询族或证据面时，可拆给子代理并行只读研究 | 子代理不是默认强制；controller 仍负责范围控制、去重、排序、本地适配和最终验证 |
 | 输出证据闭环 | `SKILL.md` 要求记录 search path、subagent used/skipped、key evidence、rejected options、verification standard | 使用子代理时必须留下 subagent trace，避免“搜了很多”但没有可复核证据 |
-| Codex 集成 | `agents/openai.yaml` 提供可识别的 skill 展示信息和默认 prompt | 仍需要用户在本机 Codex skill 目录中安装 |
+| Codex 集成 | `agents/openai.yaml` 提供展示信息和默认 prompt | 仍需要用户在本机 Codex skill 目录中安装 |
 
-### When to use
-
-使用这个 skill：
-
-- 构建、运行、测试、部署、SDK、API、依赖、框架或集成问题可能已有开源先例。
-- 某个功能实现卡在 API 用法、边界条件、版本差异或配置形态上。
-- 你需要比较多个 GitHub 项目，并说明 Stars、license、活跃度、适配成本和风险。
-- 你需要从 issue、PR、release notes、示例代码或测试中提取可落地的修复模式。
-- 你希望在写本地方案前先明确：可复用什么、必须适配什么、不能复制什么、如何验证。
-- 一个研究任务横跨多个框架、语言、工具、部署面或 GitHub community，需要条件式并行研究。
-
-不要使用它：
-
-- 文案、小型本地重构、或代码库已经明确给出答案的改动。
-- 用户明确禁止联网或 GitHub 研究的任务。
-- 未获授权的私有仓库、凭证、cookie、token、公司内部代码、敏感日志、production data 或不可公开上下文。
-- 需要直接修复生产事故但尚未完成本地日志、状态和官方文档核对的情况。
-- 窄错误已经有唯一明显仓库、API 或 maintainer surface，且子代理只会重复同一批搜索。
-
-### How it works
+### 工作流
 
 ```mermaid
 flowchart LR
-  A["Local engineering problem"] --> B["Frame symptom, versions, constraints"]
-  B --> C["Search with GitHub CLI"]
+  A["Local software engineering problem"] --> B["Frame symptom, versions, constraints"]
+  B --> C["Search GitHub and open-source evidence"]
   C --> D["Rank evidence and repositories"]
   D --> E["Deep-read strongest matches"]
-  E --> F["Extract reusable pattern and risks"]
+  E --> F["Extract proven path and risks"]
   F --> G["Map to local adaptation"]
-  G --> H["Define verification standard"]
+  G --> H["Verify with tests, builds, requests, or logs"]
 ```
 
 默认研究路径：
@@ -91,7 +96,7 @@ flowchart LR
 5. 按问题匹配度、证据强度、本地适用性、可操作性和项目成熟度排序。
 6. 深读最强候选，提取可复用接口、配置、测试、工作流、风险和 license 边界。
 7. 合并、去重并拒绝不适配候选；使用子代理时由 controller 直接核验关键 claim。
-8. 输出本地修复或实施建议，并给出验证命令、真实请求、测试或人工检查标准。
+8. 输出本地修复或实施建议，并用测试、构建、真实请求、日志或人工检查完成验证标准。
 
 ### Installation
 
@@ -99,17 +104,17 @@ flowchart LR
 
 ```bash
 mkdir -p ~/.codex/skills
-git clone https://github.com/Jia-Ethan/github-solution-research.git \
-  ~/.codex/skills/github-solution-research
+git clone https://github.com/Jia-Ethan/pavedpath-code.git \
+  ~/.codex/skills/pavedpath-code
 ```
 
 更新已有安装：
 
 ```bash
-git -C ~/.codex/skills/github-solution-research pull --ff-only
+git -C ~/.codex/skills/pavedpath-code pull --ff-only
 ```
 
-建议先安装并登录 GitHub CLI：
+建议按需安装并登录 GitHub CLI：
 
 ```bash
 gh auth status
@@ -122,7 +127,7 @@ gh auth status
 在 Codex 中调用 skill：
 
 ```text
-Use $github-solution-research to investigate this Vite build error.
+Use $pavedpath-code to investigate this Vite build error.
 Find matching GitHub issues, merged PRs, release notes, and reusable fixes,
 then recommend the smallest local adaptation and verification command.
 ```
@@ -168,20 +173,9 @@ gh repo view owner/repo \
   --json nameWithOwner,url,description,stargazerCount,forkCount,licenseInfo,primaryLanguage,pushedAt,repositoryTopics,homepageUrl
 ```
 
-### Subagent trace contract
-
-如果使用子代理，最终回答需要留下这部分信息：
-
-- scope：每个子代理负责的查询族、仓库范围、证据面和限制。
-- evidence surfaces：实际搜索过的 repos、issues、PRs、discussions、code、examples、releases 或 docs。
-- key findings：可复核的关键发现与直接链接。
-- rejected candidates：拒绝项和拒绝原因。
-- deduplication results：哪些结果其实是同一 repo、issue、PR、代码路径或重复报告。
-- controller verified claims：controller 用 `gh`、源码读取、测试、日志、真实请求或官方文档直接核验过的 claim。
-
 ### Output contract
 
-当这个 skill 实质影响结论时，回答应包含：
+当 PavedPath Code 实质影响结论时，回答应包含：
 
 - 本地问题画像：目标、症状、版本、环境和约束。
 - 搜索路径：查询词、搜索面、候选来源，以及是否使用或跳过子代理。
@@ -202,7 +196,7 @@ gh repo view owner/repo \
 - 避免复制大段第三方代码。优先复用公开 API、配置形态、工作流、测试模式和架构思路；如需代码复用，先检查 license 和归属要求。
 - 对安全、支付、鉴权、基础设施或生产运维类问题，GitHub 证据必须与当前官方文档或官方仓库交叉验证。
 
-### Status boundaries and roadmap
+### Roadmap
 
 当前已包含：
 
@@ -226,60 +220,36 @@ gh repo view owner/repo \
 - 保证每个工程问题都有公开答案。
 - 在未授权范围内读取或复制私有代码。
 
-### License
-
-MIT License. See [LICENSE](LICENSE).
-
 ## English
 
 ### Project positioning
 
-GitHub Solution Research is an independently installable Codex skill for turning concrete engineering problems into evidence-backed GitHub research. It searches public repositories, issues, PRs, discussions, code, examples, and release notes; compares candidate repositories; and maps reusable patterns into local fixes, implementation plans, or verification standards.
+PavedPath Code is the code-focused edition of PavedPath. It helps agents avoid reinventing solutions for software engineering problems by finding proven implementation paths from GitHub repositories, issues, pull requests, discussions, code examples, release notes, and open-source evidence.
 
-Use it when the real question is: "Has the open-source ecosystem already solved something close enough to this problem?" It does not replace local debugging, official documentation, code review, or security review. It must not be used to copy private repositories, tokens, cookies, credentials, sensitive logs, production data, or large chunks of third-party code.
+It is not a generic GitHub link search. GitHub is the primary evidence source; the goal is to find a path the open-source world has already walked, decide whether it fits the local codebase, and adapt the strongest pattern with minimal, verifiable changes.
 
-### Features
+This repository is intentionally scoped to code and engineering work. The future general-purpose PavedPath is out of scope.
 
-| Capability | Included | Boundary |
-| --- | --- | --- |
-| GitHub CLI first | Uses `gh search repos`, `gh search issues`, `gh search prs`, `gh search code`, `gh repo view`, `gh pr view`, `gh issue view`, and `gh api` as the default inspection surface | No bundled Python search script is required; `gh` output still needs deep-reading and local verification |
-| Problem evidence search | Searches issues, PRs, code, examples, release notes, and docs using exact errors, package/API names, versions, config keys, frameworks, and failing commands | GitHub is evidence, not proof by link count or popularity |
-| Repository candidate research | Compares public repositories by problem fit, Stars, license, activity, example quality, and adaptation cost | Stars are maturity signals; they do not override maintainer evidence, merged PRs, official examples, or reproducible code |
-| Conditional subagent research | Splits read-only research across subagents when a task spans multiple ecosystems, query families, or evidence surfaces | Subagents are not mandatory by default; the controller remains responsible for scope, deduplication, ranking, local adaptation, and final verification |
-| Evidence-backed output | `SKILL.md` requires search path, subagent used/skipped, key evidence, rejected options, and verification standard | When subagents are used, the final answer must include a subagent trace |
-| Codex integration | `agents/openai.yaml` provides skill-facing display metadata and a default prompt | Users still need to install it into their local Codex skills directory |
+### Scope
 
-### When to use
+Use PavedPath Code for:
 
-Use this skill when:
-
-- A build, runtime, test, deploy, SDK, API, dependency, framework, or integration blocker may have an open-source precedent.
-- A feature is blocked by unclear API usage, edge cases, version behavior, or configuration shape.
-- You need to compare GitHub projects by Stars, license, activity, fit, adaptation cost, and risk.
-- You need to extract actionable patterns from issues, PRs, release notes, examples, or tests.
-- You want a clear answer on what to reuse, what to adapt locally, what not to copy, and how to verify.
-- A research task spans multiple frameworks, languages, tools, deployment surfaces, or GitHub communities and would benefit from conditional parallel research.
+- bugs, runtime errors, build/test/deploy failures;
+- dependency, SDK, framework, API usage, or integration blockers;
+- implementation patterns, configuration shapes, test fixtures, migration paths, or engineering tool/library selection;
+- comparing open-source projects by Stars, license, activity, fit, adaptation cost, and risk;
+- extracting actionable fixes from issues, PRs, release notes, examples, or tests;
+- answering whether a concrete engineering problem already has a proven open-source path.
 
 Do not use it for:
 
-- Copy edits, tiny local refactors, or changes where the existing codebase already dictates the answer.
-- Tasks where the user explicitly forbids network or GitHub research.
-- Unauthorized private repositories, credentials, cookies, tokens, internal company code, sensitive logs, production data, or non-public context.
-- Production incidents where local logs, runtime state, and official docs have not been checked first.
-- Narrow errors with one obvious repository, API, or maintainer surface where subagents would duplicate the same search.
+- copy edits, tiny local refactors, or changes where the existing codebase already dictates the answer;
+- non-code life decisions, self-media workflows, study methods, consumer decisions, or broad general research;
+- tasks where the user explicitly forbids network or GitHub research;
+- unauthorized private repositories, credentials, cookies, tokens, internal company code, sensitive logs, production data, or non-public context;
+- production incidents where local logs, runtime state, and official docs have not been checked first.
 
 ### How it works
-
-```mermaid
-flowchart LR
-  A["Local engineering problem"] --> B["Frame symptom, versions, constraints"]
-  B --> C["Search with GitHub CLI"]
-  C --> D["Rank evidence and repositories"]
-  D --> E["Deep-read strongest matches"]
-  E --> F["Extract reusable pattern and risks"]
-  F --> G["Map to local adaptation"]
-  G --> H["Define verification standard"]
-```
 
 Default research path:
 
@@ -290,7 +260,7 @@ Default research path:
 5. Rank by problem fit, evidence strength, local applicability, actionability, and project maturity.
 6. Deep-read the strongest candidates and extract reusable interfaces, configuration, tests, workflows, risks, and license boundaries.
 7. Merge, deduplicate, and reject weak candidates; when subagents were used, the controller directly verifies the strongest claims.
-8. Produce a local fix or implementation recommendation with a concrete verification command, request, test, or manual check.
+8. Produce a local fix or implementation recommendation with a concrete verification command, request, test, log, or manual check.
 
 ### Installation
 
@@ -298,14 +268,14 @@ Install into the default Codex skills directory:
 
 ```bash
 mkdir -p ~/.codex/skills
-git clone https://github.com/Jia-Ethan/github-solution-research.git \
-  ~/.codex/skills/github-solution-research
+git clone https://github.com/Jia-Ethan/pavedpath-code.git \
+  ~/.codex/skills/pavedpath-code
 ```
 
 Update an existing installation:
 
 ```bash
-git -C ~/.codex/skills/github-solution-research pull --ff-only
+git -C ~/.codex/skills/pavedpath-code pull --ff-only
 ```
 
 Install and authenticate GitHub CLI when needed:
@@ -314,14 +284,12 @@ Install and authenticate GitHub CLI when needed:
 gh auth status
 ```
 
-This skill is not tied to any specific model. It incorporates multi-agent search advice while staying model-agnostic; the durable contract is problem decomposition, linked evidence, deduplication, controller verification, and local validation.
-
 ### Usage examples
 
 Invoke the skill in Codex:
 
 ```text
-Use $github-solution-research to investigate this Vite build error.
+Use $pavedpath-code to investigate this Vite build error.
 Find matching GitHub issues, merged PRs, release notes, and reusable fixes,
 then recommend the smallest local adaptation and verification command.
 ```
@@ -348,18 +316,6 @@ gh search issues '"Cannot find module" "Node.js 22"' \
   --json title,url,state,updatedAt,commentsCount,repository,body
 ```
 
-Search merged PRs:
-
-```bash
-gh search prs '"ERR_PACKAGE_PATH_NOT_EXPORTED" vite plugin' \
-  --repo owner/repo \
-  --merged \
-  --sort updated \
-  --order desc \
-  --limit 10 \
-  --json title,url,state,updatedAt,commentsCount,repository,body
-```
-
 Inspect repository basics:
 
 ```bash
@@ -367,64 +323,42 @@ gh repo view owner/repo \
   --json nameWithOwner,url,description,stargazerCount,forkCount,licenseInfo,primaryLanguage,pushedAt,repositoryTopics,homepageUrl
 ```
 
-### Subagent trace contract
-
-When subagents are used, the final answer should include:
-
-- scope: each subagent's query family, repository scope, evidence surface, and constraints.
-- evidence surfaces: repos, issues, PRs, discussions, code, examples, releases, or docs actually searched.
-- key findings: directly linked findings that matter.
-- rejected candidates: rejected options and reasons.
-- deduplication results: results that point to the same repo, issue, PR, code path, or repeated report.
-- controller verified claims: claims directly verified by the controller with `gh`, source reads, tests, logs, real requests, or official docs.
-
 ### Output contract
 
-When this skill materially affects an answer, the answer should include:
+When PavedPath Code materially affects an answer, the answer should include:
 
 - Local problem profile: goal, symptom, versions, environment, and constraints.
-- Search path: queries, GitHub surfaces, discovery methods used, and whether subagents were used or skipped.
+- Search path: queries, GitHub/open-source surfaces, discovery methods used, and whether subagents were used or skipped.
 - Subagent trace: only when subagents were used; include scope, evidence surfaces, key findings, rejected candidates, deduplication results, and controller verified claims.
 - Repository candidates: repo, Stars, forks, language, license, activity, basic content, fit rationale, and adaptation cost.
 - Key evidence: links to issues, PRs, code, examples, release notes, or docs, with match rationale.
 - Recommended solution: what to reuse directly, what to adapt locally, and what to avoid copying.
 - Rejected or risky options: stale versions, mismatches, license, privacy, security, or deployment risks.
-- Verification standard: test, build, reproduction command, real request, or manual check.
-- Confidence label when evidence is weak or no strong GitHub solution was found.
+- Verification standard: test, build, reproduction command, real request, log, or manual check.
+- Confidence label when evidence is weak or no strong open-source solution was found.
 
 ### Security
 
-- The default scope is public GitHub content. Private repositories require explicit user authorization and a bounded scope.
-- Do not write GitHub tokens, cookies, passwords, API keys, private repository contents, internal context, sensitive logs, production data, or credentials into prompts, outputs, logs, READMEs, scripts, or memory files.
+- Research public GitHub content by default. Private repositories require explicit user authorization and a bounded scope.
+- Do not write GitHub tokens, cookies, passwords, API keys, private repository contents, internal context, sensitive logs, production data, or credentials into prompts, outputs, logs, README files, scripts, or memory files.
 - Do not pass tokens, cookies, private repository contents, sensitive logs, secrets, production data, or credentials to subagents.
-- Only check `gh auth status` when a `gh` command fails with 403, 429, a private repository authorization error, or an explicit not-authenticated message.
-- Avoid copying large blocks of third-party code. Prefer public APIs, configuration shapes, workflows, test patterns, and architecture ideas. If code reuse is necessary, check the license and attribution obligations first.
-- For security, payments, auth, infrastructure, or production operations, cross-check GitHub findings against current official docs or official repositories.
+- Only check `gh auth status` after a `gh` command reports 403, 429, a private repository authorization error, or an explicit not-authenticated message.
+- Avoid copying large chunks of third-party code. Prefer public APIs, configuration shapes, workflows, test patterns, and architecture ideas; check license and attribution obligations before reusing code.
+- For security, payments, auth, infrastructure, or production operations, cross-check GitHub evidence against current official docs or official repositories.
 
-### Status boundaries and roadmap
+## Migration
 
-Currently included:
+`github-solution-research` has been renamed to **PavedPath Code**.
 
-- Codex skill entrypoint: `SKILL.md`
-- OpenAI agent metadata: `agents/openai.yaml`
-- Research rubric and extraction references: `references/`
-- GitHub CLI first query templates and output contract
-- Conditional subagent / parallel research guidance
+Previous behavior is preserved; this is a naming and positioning update. New installations should use:
 
-Possible improvements:
+```bash
+git clone https://github.com/Jia-Ethan/pavedpath-code.git \
+  ~/.codex/skills/pavedpath-code
+```
 
-- Add a structured JSON schema for research outputs.
-- Add query templates for common language ecosystems.
-- Add offline sample fixtures for demonstrating output shape without GitHub API access.
-- Add CI for Markdown links, formatting, and sensitive-content pattern checks.
+Do not keep an old `github-solution-research/SKILL.md` under an active Codex skill root together with `pavedpath-code/SKILL.md`; Codex may recursively load both.
 
-This project does not promise to:
-
-- Automatically fix local code.
-- Automatically judge every GitHub result as true or false.
-- Guarantee a public answer for every engineering problem.
-- Read or copy private code outside the user's authorized scope.
-
-### License
+## License
 
 MIT License. See [LICENSE](LICENSE).

@@ -1,37 +1,40 @@
 ---
-name: github-solution-research
-description: Use when a concrete engineering problem, bug, integration failure, dependency issue, unclear API usage, implementation blocker, or tool/capability need may already have a proven solution in GitHub open-source projects, issues, pull requests, discussions, code, examples, or release notes. Use it to find suitable repositories, report project basics including Stars when a repo-level solution applies, and adapt the existing solution with minimal local changes.
+name: pavedpath-code
+description: PavedPath Code is the code-focused edition of PavedPath. It helps agents solve software engineering problems by finding proven implementation paths from GitHub repositories, issues, pull requests, discussions, code examples, release notes, and open-source evidence.
 ---
 
-# GitHub Solution Research
+# PavedPath Code
 
-Use GitHub as problem-solving evidence and an implementation source. The goal is to find open-source projects and GitHub evidence that already solve the user's specific engineering problem, report the relevant project information, then translate the existing solution into a local fix, implementation path, or verification plan.
+PavedPath Code（代码版）helps agents avoid reinventing solutions for software engineering problems. It searches GitHub and open-source evidence for proven implementation paths, then adapts the strongest pattern to the local codebase with minimal, verifiable changes.
 
-This skill is for concrete problems first. For general tool or architecture selection, use it only after the local goal has been framed as a specific capability, blocker, workflow, or integration need.
+Use GitHub as a primary evidence source, not as a link dump. The goal is to define the local code problem, find paths already walked in public repositories, issues, pull requests, discussions, examples, release notes, and source code, evaluate the strength of that evidence, then translate the strongest pattern into a small local fix, implementation path, or verification plan.
+
+This is the code-focused edition of PavedPath. Do not broaden it into the future general-purpose PavedPath. It is for software engineering work: bugs, runtime errors, build/test/deploy failures, dependency issues, framework or API usage, integration blockers, implementation patterns, engineering tool selection, and open-source solution adaptation.
 
 ## When to Use
 
 - Runtime, build, test, deploy, package, SDK, API, dependency, framework, or integration errors.
-- A feature implementation is blocked by an unclear edge case, missing usage pattern, or uncertain API behavior.
-- A local issue resembles something that maintainers or other open-source users may have resolved in issues, PRs, examples, code, or release notes.
-- The user asks whether GitHub/open-source projects can solve the same problem.
-- Mature implementation examples or reusable projects would reduce uncertainty for one concrete capability.
-- The answer should compare suitable GitHub repositories and explain how to use one with local adaptation.
+- A feature implementation is blocked by an unclear edge case, missing usage pattern, version behavior, or uncertain API contract.
+- A local issue resembles something that maintainers or other open-source users may have resolved in issues, PRs, examples, code, release notes, or discussions.
+- The user asks whether GitHub or open-source projects have already solved a concrete engineering problem.
+- Mature implementation examples or reusable projects would reduce uncertainty for one specific capability.
+- The answer should compare suitable GitHub repositories and explain how to adapt one proven path locally.
 
-Do not use for tiny edits, copy changes, local-only refactors where the codebase already dictates the answer, or requests that explicitly forbid web/GitHub research. Do not inspect private repositories unless the user explicitly scopes and authorizes that access.
+Do not use PavedPath Code for copy edits, purely local refactors where the codebase already dictates the answer, non-code life decisions, self-media workflows, study methods, consumer purchasing decisions, or requests that explicitly forbid web/GitHub research. Do not inspect private repositories unless the user explicitly scopes and authorizes that access.
 
 ## Default Workflow
 
-1. **Frame the problem locally first.** Capture the goal, actual symptom, error signature, reproduction path, versions, runtime, dependency/framework names, recent changes, constraints, and attempted fixes. If a discoverable fact is missing, inspect local files/logs before asking.
+1. **Frame the local code problem first.** Capture the goal, symptom, error signature, reproduction path, versions, runtime, dependency/framework names, recent changes, constraints, and attempted fixes. If a discoverable fact is missing, inspect local files/logs before asking.
 2. **Choose the evidence mode.** For errors/regressions, search issues, PRs, releases, and code first. For capability or tool needs, search repository candidates first. For feature implementation, use both repository candidates and issue/PR/code evidence.
 3. **Evaluate subagent usefulness.** Before substantial GitHub research, decide whether conditional subagent work would improve breadth, evidence quality, or review coverage. If not using subagents, state the reason briefly when reporting the search path.
 4. **Create targeted searches.** Prefer exact error text, package/API names, version numbers, framework + symptom, file names, config keys, stack trace fragments, failing command names, or capability + framework/runtime/API names.
 5. **Find suitable GitHub projects when relevant.** Prefer high-fit, high-Star, active, non-archived repositories with clear licenses and real examples. Lower the Star threshold when the high-Star set is too broad or misses the exact problem.
-6. **Search GitHub evidence surfaces.** Use issues, PRs, discussions, code, examples, release notes, and official project docs within relevant open-source repos. Repository search is required when a project itself may solve the problem.
-7. **Rank by problem fit first, with Stars as a strong maturity signal.** A high-Star repository is a strong candidate for inspection, but maintainer-confirmed issues, merged PRs, released fixes, official examples, and exact matching code beat popular adjacent projects. Use [research-rubric.md](references/research-rubric.md) when ranking matters.
+6. **Search open-source evidence surfaces.** Use issues, PRs, discussions, code, examples, release notes, and official project docs within relevant open-source repos. Repository search is required when a project itself may solve the problem.
+7. **Rank by problem fit first, with Stars as a maturity signal.** A high-Star repository is a strong candidate for inspection, but maintainer-confirmed issues, merged PRs, released fixes, official examples, and exact matching code beat popular adjacent projects. Use [research-rubric.md](references/research-rubric.md) when ranking matters.
 8. **Deep-read the strongest projects and evidence.** Use [extraction-playbook.md](references/extraction-playbook.md) to extract project basics, reusable surfaces, root cause or implementation pattern, version constraints, risks, adaptation boundaries, and verification steps.
-9. **Translate to local work with minimal adaptation.** Prefer the existing GitHub solution's public workflow, API, or architecture. Adapt only the parts required by the user's local interfaces, configuration, data/auth model, deployment target, or language/runtime.
-10. **If evidence is weak, say so.** Do not stretch weak matches into a confident recommendation. Mark the recommendation as first-principles or local-only when GitHub evidence is insufficient.
+9. **Translate to local work with minimal adaptation.** Preserve the proven workflow, API, configuration shape, or architecture where it fits. Adapt only the parts required by the user's local interfaces, configuration, data/auth model, deployment target, or language/runtime.
+10. **Verify before claiming success.** Use tests, builds, reproduction commands, real requests, logs, browser checks, or manual inspection appropriate to the local problem.
+11. **If evidence is weak, say so.** Do not stretch weak matches into a confident recommendation. Mark the recommendation as first-principles or local-only when open-source evidence is insufficient.
 
 ## Subagent / Parallel Research Guidance
 
@@ -101,17 +104,17 @@ For each serious evidence item, identify:
 
 ## Output Contract
 
-When this skill materially affects the answer, include:
+When PavedPath Code materially affects the answer, include:
 
 - local problem profile: goal, symptom/error, versions/environment, and local constraints;
-- search path: queries or discovery methods used, GitHub surfaces searched, and whether subagents were used or skipped;
+- search path: queries or discovery methods used, GitHub/open-source surfaces searched, and whether subagents were used or skipped;
 - subagent trace when subagents were used: each subagent's scope, evidence surfaces, key findings, rejected candidates, deduplication results, and which claims the controller directly verified;
 - project candidates when a GitHub project itself is relevant: repo link, Stars, forks, language, license, activity, basic content, match rationale, and how it can be used locally;
 - key evidence: links to issues, PRs, code, examples, releases, or repos, with match rationale;
 - recommended solution: what to reuse directly, what to adapt locally, what to avoid copying, and why it fits;
 - rejected or risky options: why they do not apply or need caution;
 - verification standard: test, build, reproduction command, real request, or manual check required to confirm the fix;
-- confidence label when evidence is weak or no strong GitHub solution was found.
+- confidence label when evidence is weak or no strong open-source solution was found.
 
 When repository-level solutions are relevant, include a compact project table. For pure issue/PR/code fixes, the table is optional, but include repository context if it affects trust or applicability.
 
@@ -119,11 +122,15 @@ Do not answer with only links, Stars, or popularity rankings. Do not write "comm
 
 For website, SaaS, landing-page, theme, or frontend-template candidate research, include both the repository URL and the live preview/demo URL for every serious candidate. If no preview is available or verified, state that explicitly and downgrade the candidate.
 
+## Migration Note
+
+`github-solution-research` has been renamed to **PavedPath Code**. Previous behavior is preserved; this is a naming and positioning update for the code-focused edition of PavedPath. New installations should use the `pavedpath-code` skill name and active skill directory.
+
 ## Safety Boundaries
 
 - Prefer reading patterns and reusing existing public interfaces over copying code. If code reuse is necessary, check the license and keep attribution/obligation risks visible.
-- Avoid large rewrites of an existing GitHub solution. Keep its proven flow intact and make only the local adaptations required for the user's problem.
+- Avoid large rewrites of an existing open-source solution. Keep its proven flow intact and make only the local adaptations required for the user's problem.
 - Avoid large verbatim excerpts from repositories, READMEs, issues, PRs, or documentation.
 - Do not save GitHub tokens, cookies, private repository contents, or credentials in outputs, logs, skills, or memory.
 - Do not pass tokens, cookies, private repository contents, sensitive logs, secrets, production data, or credentials to subagents.
-- If network access is unavailable, state that GitHub research could not be performed and mark the recommendation as local-only.
+- If network access is unavailable, state that open-source research could not be performed and mark the recommendation as local-only.

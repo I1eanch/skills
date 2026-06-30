@@ -1,4 +1,5 @@
 interface:
-  display_name: "GitHub Solution Research"
-  short_description: "Use GitHub CLI first to find high-fit GitHub evidence and map reusable patterns to local adaptation."
-  default_prompt: "Use $github-solution-research to frame my problem, search GitHub with gh first, conditionally use subagents only when they improve research coverage, list relevant project basics including Stars when a repository-level solution applies, record subagent trace if used, then recommend the smallest local adaptation and verification path."
+  display_name: "PavedPath Code"
+  alias: "PavedPath Code（代码版）"
+  short_description: "在 GitHub 和开源证据中寻找已经走通的代码解法，并转译为可验证的本地实现路径。"
+  default_prompt: "Use $pavedpath-code to frame my software engineering problem, search GitHub and open-source evidence with gh first, conditionally use subagents only when they improve research coverage, list relevant project basics including Stars when a repository-level solution applies, record subagent trace if used, then recommend the smallest local adaptation and verification path."
