@@ -3,10 +3,12 @@
 <h1 align="center">PavedPath Code</h1>
 
 <p align="center">
-  PavedPath Code（代码版）is a Codex skill for finding proven implementation paths from GitHub and open-source evidence, then adapting them to local software engineering problems.
+  PavedPath Code（代码版）is a reusable Skill for finding proven implementation paths from GitHub and open-source evidence, then adapting them to local software engineering problems.
 </p>
 
 <p align="center">
+  <a href="#复制给智能体安装">复制给智能体安装</a>
+  ·
   <a href="#简体中文">简体中文</a>
   ·
   <a href="#english">English</a>
@@ -17,7 +19,7 @@
 </p>
 
 <p align="center">
-  <img alt="Codex skill" src="https://img.shields.io/badge/Codex-skill-111827?style=flat-square">
+  <img alt="Reusable Skill" src="https://img.shields.io/badge/Reusable-Skill-111827?style=flat-square">
   <img alt="PavedPath Code" src="https://img.shields.io/badge/PavedPath-Code-7c3aed?style=flat-square">
   <img alt="GitHub CLI first" src="https://img.shields.io/badge/GitHub%20CLI-first-0969da?style=flat-square">
   <img alt="License MIT" src="https://img.shields.io/badge/license-MIT-green?style=flat-square">
@@ -31,6 +33,14 @@
 > PavedPath Code（代码版）用于解决代码、工程、依赖、构建、部署、集成、API 使用等问题。它不是泛泛搜索 GitHub，而是从开源项目、issue、PR、示例、release notes 等证据中找到已经被验证过的实现路径，再转译成本地可执行方案。
 >
 > This repository is not the future general-purpose PavedPath. Non-code life decisions, self-media workflows, study methods, consumer decisions, and broad research tasks are out of scope here.
+
+## 复制给智能体安装
+
+把下面这段话复制到 Codex、Claude Code、Cursor Agent、ChatGPT Agent 或其他支持读取 GitHub 项目的智能体：
+
+```text
+请使用 https://github.com/Jia-Ethan/pavedpath-code 帮我安装或接入 PavedPath Code（代码版）这个通用 Skill。先阅读 README、SKILL.md、MIGRATION.md 和 references/，确认它的边界是代码 / 工程问题：bug、runtime error、build / test / deploy failure、dependency issue、framework/API usage、integration blocker、implementation pattern、工程工具/库选型，以及开源方案本地适配。不要把它扩展成生活、消费、自媒体或学习方法的通用 PavedPath。安装前先审计将写入的准确路径；如果你的环境有 skills 目录，就安装到对应的 active skill 目录并避免同时保留旧的 github-solution-research/SKILL.md；如果没有固定 skill 目录，就把 README 和 SKILL.md 转成你的本地可复用指令。写入前展示计划和备份路径，等我确认；确认后再备份、安装，并用一次最小调用验证新名称 pavedpath-code / PavedPath Code 可被正确识别。不要保存 token、cookie、私有仓库内容、敏感日志或凭证。
+```
 
 ## 友链 / Community
 
@@ -72,7 +82,7 @@ PavedPath Code（代码版）帮助 Agent 避免为代码问题重复造轮子�
 | 仓库候选研究 | 按问题匹配、Stars、license、活跃度、示例质量和适配成本比较公开仓库 | Stars 是成熟度信号，不会覆盖 maintainer evidence、merged PR、official examples 或可复现代码 |
 | 条件子代理研究 | 当问题跨多个生态、查询族或证据面时，可拆给子代理并行只读研究 | 子代理不是默认强制；controller 仍负责范围控制、去重、排序、本地适配和最终验证 |
 | 输出证据闭环 | `SKILL.md` 要求记录 search path、subagent used/skipped、key evidence、rejected options、verification standard | 使用子代理时必须留下 subagent trace，避免“搜了很多”但没有可复核证据 |
-| Codex 集成 | `agents/openai.yaml` 提供展示信息和默认 prompt | 仍需要用户在本机 Codex skill 目录中安装 |
+| 智能体集成 | `SKILL.md` 和 `agents/openai.yaml` 提供可复用 Skill 指令、展示信息和默认 prompt | 可安装到 Codex、Claude Code、Cursor Agent 或其他支持本地指令/Skill 的智能体环境 |
 
 ### 工作流
 
@@ -100,7 +110,7 @@ flowchart LR
 
 ### Installation
 
-安装到默认 Codex skill 目录：
+安装到你的智能体 active skill / instructions 目录。下面示例使用 `~/.codex/skills`；Claude Code、Cursor Agent、ChatGPT Agent 或其他智能体请按自己的本地指令目录改写路径：
 
 ```bash
 mkdir -p ~/.codex/skills
@@ -120,11 +130,11 @@ git -C ~/.codex/skills/pavedpath-code pull --ff-only
 gh auth status
 ```
 
-这个 skill 不绑定任何具体模型。它吸收了多 agent 搜索建议，但保持模型无关；真正的约束在于问题拆分、证据链接、去重、controller 复核和本地验证。
+这个 Skill 不绑定任何具体模型或智能体。它吸收了多 agent 搜索建议，但保持平台无关；真正的约束在于问题拆分、证据链接、去重、controller 复核和本地验证。
 
 ### Usage examples
 
-在 Codex 中调用 skill：
+在智能体中调用 Skill：
 
 ```text
 Use $pavedpath-code to investigate this Vite build error.
@@ -200,7 +210,7 @@ gh repo view owner/repo \
 
 当前已包含：
 
-- Codex skill 主入口：`SKILL.md`
+- Skill 主入口：`SKILL.md`
 - OpenAI agent metadata：`agents/openai.yaml`
 - 研究评分和提取参考：`references/`
 - GitHub CLI first 的查询模板和输出契约
@@ -264,7 +274,7 @@ Default research path:
 
 ### Installation
 
-Install into the default Codex skills directory:
+Install into your agent runtime's active local skills/instructions directory. The example below uses `~/.codex/skills`; adapt the path for Claude Code, Cursor Agent, ChatGPT Agent, or another agent runtime:
 
 ```bash
 mkdir -p ~/.codex/skills
@@ -286,7 +296,7 @@ gh auth status
 
 ### Usage examples
 
-Invoke the skill in Codex:
+Invoke the Skill in an agent:
 
 ```text
 Use $pavedpath-code to investigate this Vite build error.
@@ -357,7 +367,7 @@ git clone https://github.com/Jia-Ethan/pavedpath-code.git \
   ~/.codex/skills/pavedpath-code
 ```
 
-Do not keep an old `github-solution-research/SKILL.md` under an active Codex skill root together with `pavedpath-code/SKILL.md`; Codex may recursively load both.
+Do not keep an old `github-solution-research/SKILL.md` under an active skill root together with `pavedpath-code/SKILL.md`; an agent runtime may recursively load both.
 
 ## License
 

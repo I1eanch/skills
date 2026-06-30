@@ -124,7 +124,7 @@ For website, SaaS, landing-page, theme, or frontend-template candidate research,
 
 ## Migration Note
 
-`github-solution-research` has been renamed to **PavedPath Code**. Previous behavior is preserved; this is a naming and positioning update for the code-focused edition of PavedPath. New installations should use the `pavedpath-code` skill name and active skill directory.
+`github-solution-research` has been renamed to **PavedPath Code**. Previous behavior is preserved; this is a naming and positioning update for the code-focused edition of PavedPath. New installations should use the `pavedpath-code` skill name and the active skill/instruction directory of the target agent runtime.
 
 ## Safety Boundaries
 
