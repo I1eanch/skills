@@ -1,20 +1,32 @@
-# Migration: PavedPath Code
+# История переименований
 
-`github-solution-research` has been renamed to **PavedPath Code**.
+Скилл сменил имя дважды:
 
-- New skill name: `pavedpath-code`
-- Display name: `PavedPath Code`
-- Chinese alias: `PavedPath Code（代码版）`
-- Previous behavior is preserved; this is a naming and positioning update.
-- New active installations should use the `pavedpath-code` Skill name. If your runtime uses `~/.codex/skills`, install to `~/.codex/skills/pavedpath-code`; other agent runtimes should use their own active skill/instruction directory.
-- Avoid keeping an old `github-solution-research/SKILL.md` under an active skill root, because an agent runtime may recursively load both names.
+| Было | Стало | Что изменилось |
+| --- | --- | --- |
+| `github-solution-research` | `pavedpath-code` | Переименование и репозиционирование в апстриме |
+| `pavedpath-code` | `opensource-finder` | Этот форк: контент на русском, имя совпадает с именем репозитория, добавлен раздел нативных инструментов OMP |
 
-## Update an existing local installation
+Поведение скилла сохранено во всех переименованиях: постановка задачи первой, GitHub CLI как основа поиска, ранжирование доказательств, минимальная локальная адаптация и обязательная проверка.
+
+- Текущее имя скилла: `opensource-finder`
+- Отображаемое имя: `Opensource Finder`
+- Апстрим: [Jia-Ethan/pavedpath-code](https://github.com/Jia-Ethan/pavedpath-code)
+
+## Установка на замену старой версии
+
+Один каталог активных скиллов не должен содержать несколько имён этого скилла одновременно: рантайм может рекурсивно загрузить оба и получить конфликт инструкций.
 
 ```bash
-mkdir -p ~/.codex/skills
-rm -rf ~/.codex/skills/pavedpath-code
-git clone https://github.com/Jia-Ethan/pavedpath-code.git ~/.codex/skills/pavedpath-code
+rm -rf ~/.omp/agent/skills/pavedpath-code ~/.omp/agent/skills/github-solution-research
+git clone https://github.com/I1eanch/opensource-finder.git \
+  ~/.omp/agent/skills/opensource-finder
 ```
 
-If an old installation exists at `~/.codex/skills/github-solution-research`, move it outside the active skill root or remove it after confirming `pavedpath-code` is installed.
+Для других рантаймов путь заменить на свой каталог активных скиллов, например `~/.codex/skills/opensource-finder`.
+
+Проверка после установки:
+
+```bash
+omp -p --no-session 'Прочитай skill://opensource-finder и выведи значение поля name.'
+```

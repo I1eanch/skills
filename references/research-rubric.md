@@ -1,72 +1,73 @@
-# PavedPath Code Evidence Rubric
+# Рубрика оценки доказательств
 
-Use this rubric when ranking GitHub and open-source evidence for a concrete software engineering problem or a repository-level solution. The score is a decision aid, not a replacement for judgment.
+Рубрика применяется при ранжировании доказательств из GitHub и опенсорса для конкретной инженерной задачи или для выбора готового проекта. Оценка — подспорье решению, а не замена суждению.
 
-## Default Score: 100 points
+## База: 100 баллов
 
-| Category | Points | What to Check |
+| Категория | Баллы | Что проверять |
 | --- | ---: | --- |
-| Problem match | 35 | Same error, symptom, API, dependency, framework, version class, runtime, config, workflow, capability, or failure mode. |
-| Evidence strength | 20 | Maintainer confirmation, merged PR, released fix, official example, test fixture, repeated independent reports, clear reproduction, or mature project implementation. |
-| Local applicability | 20 | Fits the user's repo constraints, versions, deployment target, data/auth model, dependency policy, and risk tolerance. |
-| Actionability and adaptation cost | 15 | Provides a concrete patch, config change, version pin/upgrade, API usage, reusable workflow, test, reproduction, or operational step with minimal local adaptation. |
-| Project maturity signals | 10 | Stars, forks, recent activity, non-archived status, clear license, docs/examples, maintainer responsiveness, and production use signals. |
+| Попадание в задачу | 35 | Та же ошибка, симптом, API, зависимость, фреймворк, класс версий, рантайм, конфигурация, процесс, возможность или режим отказа. |
+| Сила доказательства | 20 | Подтверждение мейнтейнера, влитый PR, вышедший фикс, официальный пример, тестовая фикстура, повторные независимые сообщения, ясное воспроизведение или зрелая реализация в проекте. |
+| Локальная применимость | 20 | Совпадение с ограничениями репозитория, версиями, целью деплоя, моделью данных и доступа, политикой зависимостей и допустимым риском. |
+| Готовность к действию и цена адаптации | 15 | Есть конкретный патч, правка конфигурации, пин или апгрейд версии, использование API, переиспользуемый процесс, тест, воспроизведение или эксплуатационный шаг с минимальной локальной адаптацией. |
+| Сигналы зрелости проекта | 10 | Звёзды, форки, свежая активность, отсутствие архивации, внятная лицензия, документация и примеры, отзывчивость мейнтейнеров, признаки использования в проде. |
 
-## Evidence Priority
+## Приоритет доказательств
 
-- Highest: merged PRs, release notes, maintainer-confirmed issues, official examples, and source/tests showing the exact behavior.
-- Strong: resolved issues with matching versions, code examples in active projects, reproducible fixes confirmed by multiple users.
-- Strong for repository-level solutions: high-fit, high-Star, active repositories with clear license, real examples, and an implementation that maps cleanly to the user's problem.
-- Useful but weaker: similar issues on nearby versions, unmerged PRs, user-discovered workarounds, old but still relevant source examples, or lower-Star projects that demonstrate the exact workflow.
-- Weak: speculative comments, stale unresolved issues, archived repos, unrelated high-Star projects, tutorials that do not hit the same failure mode, and "awesome" lists without a usable implementation.
+- Высший: влитые PR, release notes, issue с подтверждением мейнтейнера, официальные примеры, исходники и тесты, показывающие именно это поведение.
+- Сильные: решённые issue с совпадающими версиями, примеры кода в активных проектах, воспроизводимые фиксы, подтверждённые несколькими пользователями.
+- Сильные для готовых проектов: активные репозитории с точным попаданием в задачу, внятной лицензией, живыми примерами и реализацией, которая чисто переносится на задачу пользователя.
+- Полезные, но слабее: похожие issue на смежных версиях, невлитые PR, обходные пути от пользователей, старые но всё ещё релевантные примеры из исходников, малопопулярные проекты с точно нужным процессом.
+- Слабые: спекулятивные комментарии, зависшие нерешённые issue, заархивированные репозитории, популярные но не связанные проекты, туториалы про другой режим отказа, и awesome-списки без пригодной реализации.
 
-High Stars can put a repository near the top of the inspection list and break ties among similarly fitting projects. Stars must not override a clearly better problem match, official maintainer guidance, or exact same-version evidence.
+Много звёзд поднимает репозиторий в начало списка на осмотр и разрешает ничью между равно подходящими проектами. Звёзды не перевешивают заметно лучшее попадание в задачу, официальную позицию мейнтейнера и доказательство на той же версии.
 
-## Search Surface Handling
+## Работа с поверхностями поиска
 
-- Use GitHub CLI first. Prefer `gh search repos`, `gh search issues`, `gh search prs`, `gh search code`, `gh repo view`, `gh issue view`, `gh pr view`, and `gh api` before browser scraping or custom scripts.
-- Search issues and PRs first for errors, regressions, dependency upgrades, framework behavior, and integration failures.
-- Search code/examples first for API usage, config shape, feature implementation, or unclear integration patterns.
-- Search repositories when the problem is an implementation blocker, tool/capability need, or reusable project search where a complete project can reveal architecture or workflow.
-- For repository candidates, start with high-Star active projects, then lower the Star threshold when high-Star projects are too broad or miss the exact need.
-- Use Stars and forks as maturity context and tie-breakers. They should not outweigh exact problem evidence.
+- В OMP начинать с нативных инструментов: `read issue://<N>`, `read pr://<N>`, `read pr://<N>/diff`, `xd://github` с `op: search_*` и `op: file_read`. `gh` — когда нужны поля и фильтры, которых там нет.
+- Предпочитать `gh search repos`, `gh search issues`, `gh search prs`, `gh search code`, `gh repo view`, `gh issue view`, `gh pr view` и `gh api` скрейпингу браузером и собственным скриптам.
+- Issue и PR искать первыми для ошибок, регрессий, апгрейдов зависимостей, поведения фреймворков и падений интеграций.
+- Код и примеры искать первыми для использования API, формы конфигурации, реализации фичи и непонятных шаблонов интеграции.
+- Репозитории искать, когда задача — блокер реализации, потребность в инструменте или поиск готового проекта, у которого можно взять архитектуру или процесс.
+- Для кандидатов-репозиториев начинать с активных популярных проектов, затем снижать порог по звёздам, если популярные слишком широки или мимо задачи.
+- Звёзды и форки использовать как контекст зрелости и способ разрешить ничью, а не как замену прямым доказательствам.
 
-## Subagent Handling
+## Работа с субагентами
 
-Subagents are conditional. Use them when the problem spans independent ecosystems, query families, repositories, versions, or evidence surfaces. Skip them when the task has one obvious repository or API surface, when local context must be understood first, or when authorization, private repositories, secrets, sensitive logs, or production data would make delegation risky.
+Субагенты условны. Задействовать, когда задача покрывает независимые экосистемы, семейства запросов, репозитории, версии или поверхности доказательств. Работать одному, когда есть один очевидный репозиторий или API, когда сначала нужно понять локальный контекст, и когда доступы, приватные репозитории, секреты, чувствительные логи или продовые данные делают делегирование рискованным.
 
-When subagents are used, rank only after merging and deduplicating repeated reports of the same repo, issue, PR, discussion, code path, or release. The controller must directly verify the strongest claims before presenting them as evidence.
+При использовании субагентов ранжировать только после объединения и дедупликации повторных сообщений об одном репозитории, issue, PR, обсуждении, участке кода или релизе. Сильнейшие утверждения контроллер проверяет сам, прежде чем подавать их как доказательства.
 
-## Output Fields
+## Поля вывода
 
-For each shortlisted repository candidate, capture:
+Для каждого репозитория в шортлисте зафиксировать:
 
-- repo name and URL;
-- Stars, forks, primary language, license, last push/activity, archived status;
-- basic content: what the project does and the primary workflow/API it provides;
-- problem fit: why it matches the user's concrete problem;
-- reusable parts: API, CLI, workflow, architecture, config, examples, tests, or operational pattern;
-- adaptation cost: what must change for the user's local code, data, auth, deployment, or runtime;
-- key risk or mismatch.
+- имя и URL;
+- звёзды, форки, основной язык, лицензию, дату последнего пуша и активность, статус архивации;
+- суть: что проект делает и какой основной процесс или API даёт;
+- попадание в задачу: чем он совпадает с конкретной проблемой;
+- переиспользуемые части: API, CLI, процесс, архитектура, конфигурация, примеры, тесты или эксплуатационный шаблон;
+- цену адаптации: что придётся менять в локальном коде, данных, доступе, деплое или рантайме;
+- ключевой риск или расхождение.
 
-For each issue/PR/code/release evidence item, capture:
+Для каждого доказательства из issue, PR, кода или релиза зафиксировать:
 
-- source type: issue, PR, discussion, code, example, release, docs, or repository;
-- title/name and URL;
-- repository and project status when available;
-- relevant version/environment signal;
-- problem match summary;
-- proposed solution or pattern;
-- key risk or mismatch;
-- rank or score rationale.
+- тип источника: issue, PR, обсуждение, код, пример, релиз, документация или репозиторий;
+- название и URL;
+- репозиторий и его статус, когда он известен;
+- сигнал о релевантной версии и окружении;
+- сводку совпадения с задачей;
+- предлагаемое решение или шаблон;
+- ключевой риск или расхождение;
+- обоснование места в ранжировании.
 
-If subagents were used, also capture:
+Если использовались субагенты, дополнительно зафиксировать:
 
-- subagent scope and assigned query family;
-- evidence surfaces searched;
-- key findings and direct links;
-- rejected candidates and rejection reasons;
-- deduplication results;
-- controller verified claims.
+- область и назначенное семейство запросов каждого субагента;
+- пройденные поверхности доказательств;
+- ключевые находки с прямыми ссылками;
+- отклонённых кандидатов и причины отклонения;
+- результат дедупликации;
+- утверждения, проверенные контроллером лично.
 
-Use exact metadata only when verified in the current run. If metadata may be stale, label it as such.
+Точные метаданные приводить только если они проверены в текущем прогоне. Если метаданные могли устареть, помечать это.

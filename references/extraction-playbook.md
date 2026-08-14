@@ -1,61 +1,61 @@
-# PavedPath Code Extraction Playbook
+# Плейбук извлечения решения
 
-Use this playbook after GitHub evidence or repository candidates have been found. The goal is to turn open-source projects, issues, PRs, code, examples, releases, and docs into a local solution for the user's specific software engineering problem.
+Плейбук применяется после того, как доказательства из GitHub или репозитории-кандидаты найдены. Цель — превратить опенсорсные проекты, issue, PR, код, примеры, релизы и документацию в решение конкретной инженерной задачи пользователя.
 
-## Read in This Order
+## Порядок чтения
 
-Use GitHub CLI (`gh`) as the default inspection entrypoint before browser scraping or custom scripts. Start from `gh search repos`, `gh search issues`, `gh search prs`, `gh search code`, `gh repo view`, `gh issue view`, `gh pr view`, and `gh api`, then deep-read the strongest evidence.
+В OMP входная точка — нативные инструменты: `read pr://<N>` и `read issue://<N>` для обсуждений, `read pr://<N>/diff` для диффа, `xd://github` с `op: file_read` для файла из репозитория. `gh` — когда нужны поля и фильтры, которых там нет: `gh search repos`, `gh search issues`, `gh search prs`, `gh search code`, `gh repo view`. Скрейпинг браузером и собственные скрипты — последний вариант.
 
-1. Repository README/docs for candidate projects to identify what the project does, its public workflow/API, setup path, stated limitations, and license.
-2. Examples, templates, source code, tests, and fixtures that show the correct implementation or configuration shape.
-3. Matching issues, PRs, or discussions to identify known edge cases, affected versions, maintainer stance, and fixes or workarounds.
-4. Merged PR diff, release notes, changelog, or commit messages to see whether a fix shipped and how behavior changed.
-5. Repository-level architecture only when a complete project is the solution source or the problem is an implementation blocker rather than a narrow error.
+1. README и документация проекта-кандидата: что проект делает, какой публичный процесс и API даёт, как ставится, какие ограничения заявлены, какая лицензия.
+2. Примеры, шаблоны, исходники, тесты и фикстуры, показывающие правильную реализацию или форму конфигурации.
+3. Совпадающие issue, PR и обсуждения: известные edge-case, затронутые версии, позиция мейнтейнера, фиксы и обходные пути.
+4. Дифф влитого PR, release notes, changelog и сообщения коммитов: вышел ли фикс и как изменилось поведение.
+5. Архитектура репозитория — только когда источником решения выступает проект целиком или задача является блокером реализации, а не узкой ошибкой.
 
-## Extract What Matters
+## Что извлекать
 
-For each strong evidence item, identify:
+Для каждого сильного доказательства определить:
 
-- project basics: repo, URL, Stars, forks, language, license, activity, and what the project actually provides;
-- root cause: what actually fails and under which versions, inputs, environments, or configuration;
-- reusable surface: CLI command, package/API, service, example, architecture, config, test pattern, data model, or operational workflow worth using;
-- solution pattern: patch, dependency upgrade/downgrade, config change, API usage, migration, retry/fallback, data model, or workflow;
-- applicability: exact conditions needed for the solution to match the user's local problem;
-- verification: tests, reproduction command, fixture, build, real request, browser check, or operational signal that proves the fix;
-- risk: stale workaround, breaking change, hidden dependency, security/privacy issue, license obligation, deployment mismatch, or maintainer warning;
-- adaptation boundary: which parts can be reused directly, which local interfaces/config/data/auth/deployment details must change, and what must not be copied blindly.
+- основу проекта: репозиторий, URL, звёзды, форки, язык, лицензия, активность и что проект реально даёт;
+- первопричину: что именно падает и при каких версиях, входных данных, окружении и конфигурации;
+- переиспользуемую поверхность: команда CLI, пакет или API, сервис, пример, архитектура, конфигурация, шаблон тестов, модель данных или эксплуатационный процесс;
+- шаблон решения: патч, апгрейд или откат зависимости, правка конфигурации, использование API, миграция, ретрай или фолбэк, модель данных, процесс;
+- применимость: точные условия, при которых решение совпадает с локальной задачей;
+- проверку: тесты, команда воспроизведения, фикстура, сборка, реальный запрос, проверка в браузере или эксплуатационный сигнал, доказывающий починку;
+- риск: устаревший обходной путь, ломающее изменение, скрытая зависимость, вопрос безопасности и приватности, обязательство по лицензии, расхождение с целью деплоя, предупреждение мейнтейнера;
+- границу адаптации: что переносится напрямую, какие локальные интерфейсы, конфигурацию, данные, доступ и деплой придётся изменить, и что переносить нельзя.
 
-## Translate to Local Work
+## Перенос в локальную работу
 
-The local recommendation should say:
+Локальная рекомендация говорит:
 
-- reuse: the existing open-source workflow, API, config, example, or operational pattern that should remain intact;
-- adapt: only the version, framework, runtime, deployment, data, auth, interface, or scale differences required by the user's local problem;
-- avoid: adjacent fixes, old workarounds, unsafe patches, large architecture copies, heavy rewrites of the upstream solution, or unverified suggestions;
-- verify: the exact command, request, test, or check required before claiming the problem is solved.
+- **переиспользовать**: какой опенсорсный процесс, API, конфигурацию, пример или эксплуатационный шаблон оставить целым;
+- **адаптировать**: только те различия версии, фреймворка, рантайма, деплоя, данных, доступа, интерфейса или масштаба, которых требует локальная задача;
+- **не переносить**: смежные фиксы, старые обходные пути, небезопасные патчи, копии больших кусков архитектуры, переписывание апстримного решения и непроверенные советы;
+- **проверить**: точную команду, запрос, тест или проверку, обязательную до заявления, что задача решена.
 
-For browser/adapter fixes that build a JavaScript string for `page.evaluate`, validate both layers: run the outer file syntax check and instantiate/parse the generated script (for example, import the test helper and run `new Function(buildScript(...))`) before live browser verification. Outer syntax checks alone do not catch broken escaping inside generated scripts.
+Для фиксов в браузере и адаптерах, где JavaScript собирается строкой для `page.evaluate`, проверять оба слоя: синтаксис внешнего файла и разбор сгенерированного скрипта (например, импортировать тестовый хелпер и выполнить `new Function(buildScript(...))`) до живой проверки в браузере. Проверка внешнего синтаксиса не поймает сломанное экранирование внутри сгенерированного кода.
 
-When a repository itself is a candidate solution, include a compact table in the answer with repo, Stars, forks, language, license, activity, basic content, fit, and local adaptation. When the strongest evidence is an issue/PR/code example rather than a reusable project, the project table is optional.
+Когда кандидатом на решение выступает сам репозиторий, в ответ добавить компактную таблицу: репозиторий, звёзды, форки, язык, лицензия, активность, суть, попадание в задачу и локальная адаптация. Когда сильнейшее доказательство — issue, PR или пример кода, таблица проектов опциональна.
 
-## Subagent Evidence Handling
+## Работа с доказательствами от субагентов
 
-Subagents are conditional research aids, not a default requirement. If they are used, the controller must merge and deduplicate their findings, then directly verify the strongest claims with `gh`, source reads, tests, logs, real requests, or official docs before finalizing.
+Субагенты — условное подспорье, а не обязательный шаг. Если они использовались, контроллер объединяет и дедуплицирует их находки, затем сам проверяет сильнейшие утверждения через `pr://`, `issue://`, `gh`, чтение исходников, тесты, логи, реальные запросы или официальную документацию.
 
-The final answer should include a subagent trace with each subagent's scope, evidence surfaces, key findings, rejected candidates, deduplication results, and controller verified claims.
+Итоговый ответ содержит трассу субагентов: область каждого, пройденные поверхности доказательств, ключевые находки, отклонённых кандидатов, результат дедупликации и утверждения, проверенные контроллером лично.
 
-## Avoid These Failure Modes
+## Типичные провалы
 
-- Searching only high-star repositories when the problem is an error or regression.
-- Treating Stars as proof of applicability instead of a maturity and tie-break signal.
-- Treating a similar keyword as a match without checking version, API, and environment.
-- Ignoring unresolved state, maintainer warnings, or release availability.
-- Copying a patch without license and compatibility awareness.
-- Rewriting a mature solution instead of adapting its public workflow to the local codebase.
-- Recommending a workaround when a released fix exists.
-- Claiming open-source evidence exists without direct links to the relevant issue, PR, code, example, or release.
-- Passing tokens, cookies, private repository contents, sensitive logs, secrets, production data, or credentials to subagents.
+- Искать только среди популярных репозиториев, когда задача — ошибка или регрессия.
+- Считать звёзды доказательством применимости, а не сигналом зрелости и способом разрешить ничью.
+- Принимать похожее ключевое слово за совпадение, не проверив версию, API и окружение.
+- Пропускать нерешённый статус issue, предупреждение мейнтейнера или отсутствие фикса в релизе.
+- Переносить патч, не разобравшись с лицензией и совместимостью.
+- Переписывать зрелое решение вместо адаптации его публичного процесса под локальный код.
+- Советовать обходной путь, когда вышел официальный фикс.
+- Заявлять о наличии опенсорсных доказательств без прямых ссылок на issue, PR, код, пример или релиз.
+- Передавать субагентам токены, cookie, содержимое приватных репозиториев, чувствительные логи, секреты, продовые данные и учётные данные.
 
-## Evidence Standard
+## Стандарт доказательств
 
-When an evidence item materially affects the recommendation, include a direct link to the relevant issue, PR, source file, example, release, or docs page. Keep quotes short and summarize the solution in your own words.
+Когда доказательство существенно влияет на рекомендацию, приводить прямую ссылку на конкретный issue, PR, файл исходников, пример, релиз или страницу документации. Цитаты держать короткими, решение пересказывать своими словами.

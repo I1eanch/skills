@@ -1,148 +1,137 @@
 <!-- markdownlint-disable MD013 MD033 -->
 
-<h1 align="center">PavedPath Code</h1>
+<h1 align="center">Opensource Finder</h1>
 
 <p align="center">
-  PavedPath Code（代码版）is a reusable Skill for finding proven implementation paths from GitHub and open-source evidence, then adapting them to local software engineering problems.
+  Переиспользуемый скилл: находит в GitHub и опенсорсе уже пройденный путь решения инженерной задачи и переносит его в локальный код минимальной проверяемой правкой.
 </p>
 
 <p align="center">
-  <a href="#复制给智能体安装">复制给智能体安装</a>
-  ·
-  <a href="#简体中文">简体中文</a>
-  ·
-  <a href="#english">English</a>
-  ·
-  <a href="#migration">Migration</a>
-  ·
-  <a href="#license">License</a>
-</p>
-
-<p align="center">
-  <img alt="Reusable Skill" src="https://img.shields.io/badge/Reusable-Skill-111827?style=flat-square">
-  <img alt="PavedPath Code" src="https://img.shields.io/badge/PavedPath-Code-7c3aed?style=flat-square">
-  <img alt="GitHub CLI first" src="https://img.shields.io/badge/GitHub%20CLI-first-0969da?style=flat-square">
+  <img alt="Reusable Skill" src="https://img.shields.io/badge/%D1%81%D0%BA%D0%B8%D0%BB%D0%BB-%D0%BF%D0%B5%D1%80%D0%B5%D0%B8%D1%81%D0%BF%D0%BE%D0%BB%D1%8C%D0%B7%D1%83%D0%B5%D0%BC%D1%8B%D0%B9-111827?style=flat-square">
+  <img alt="OMP native" src="https://img.shields.io/badge/OMP-%D0%BD%D0%B0%D1%82%D0%B8%D0%B2%D0%BD%D1%8B%D0%B5%20%D0%B8%D0%BD%D1%81%D1%82%D1%80%D1%83%D0%BC%D0%B5%D0%BD%D1%82%D1%8B-7c3aed?style=flat-square">
+  <img alt="GitHub CLI" src="https://img.shields.io/badge/GitHub%20CLI-%D0%BE%D1%81%D0%BD%D0%BE%D0%B2%D0%B0-0969da?style=flat-square">
   <img alt="License MIT" src="https://img.shields.io/badge/license-MIT-green?style=flat-square">
-  <img alt="Status public skill" src="https://img.shields.io/badge/status-public%20skill-blue?style=flat-square">
 </p>
 
-> **Status boundary / 状态边界**
+> **Граница области**
 >
-> PavedPath Code is the code-focused edition of PavedPath. It helps agents solve software engineering problems by finding proven implementation paths from GitHub repositories, issues, pull requests, discussions, code examples, release notes, and open-source evidence.
+> Скилл решает задачи кода и инженерии: баги, ошибки рантайма, падения сборки, тестов и деплоя, зависимости, использование фреймворков и API, блокеры интеграции, шаблоны реализации, выбор инструментов и библиотек, адаптация опенсорсных решений.
 >
-> PavedPath Code（代码版）用于解决代码、工程、依赖、构建、部署、集成、API 使用等问题。它不是泛泛搜索 GitHub，而是从开源项目、issue、PR、示例、release notes 等证据中找到已经被验证过的实现路径，再转译成本地可执行方案。
->
-> This repository is not the future general-purpose PavedPath. Non-code life decisions, self-media workflows, study methods, consumer decisions, and broad research tasks are out of scope here.
+> Вне области: некодовые бытовые решения, процессы для соцсетей, методики обучения, потребительский выбор и широкие исследования общего характера.
 
-## 复制给智能体安装
+## Позиционирование
 
-把下面这段话复制到 Codex、Claude Code、Cursor Agent、ChatGPT Agent 或其他支持读取 GitHub 项目的智能体：
+Скилл избавляет агента от повторного изобретения решений. Сначала он описывает локальную инженерную задачу, затем ищет по GitHub и опенсорсным доказательствам путь, который уже пройден: зрелые проекты, issue, PR, обсуждения, код, примеры, release notes и официальная документация. В конце он переводит сильнейшее доказательство в минимальную локальную адаптацию с командой проверки и границами риска.
 
-```text
-请使用 https://github.com/Jia-Ethan/pavedpath-code 帮我安装或接入 PavedPath Code（代码版）这个通用 Skill。先阅读 README、SKILL.md、MIGRATION.md 和 references/，确认它的边界是代码 / 工程问题：bug、runtime error、build / test / deploy failure、dependency issue、framework/API usage、integration blocker、implementation pattern、工程工具/库选型，以及开源方案本地适配。不要把它扩展成生活、消费、自媒体或学习方法的通用 PavedPath。安装前先审计将写入的准确路径；如果你的环境有 skills 目录，就安装到对应的 active skill 目录并避免同时保留旧的 github-solution-research/SKILL.md；如果没有固定 skill 目录，就把 README 和 SKILL.md 转成你的本地可复用指令。写入前展示计划和备份路径，等我确认；确认后再备份、安装，并用一次最小调用验证新名称 pavedpath-code / PavedPath Code 可被正确识别。不要保存 token、cookie、私有仓库内容、敏感日志或凭证。
-```
+Это не инструмент «поиска ссылок на GitHub». GitHub — основной источник доказательств, а цель — найти уже проверенный путь и решить, подходит ли он текущей кодовой базе.
 
-## 友链 / Community
+## Когда применять
 
-本项目接受 LINUX DO 社区佬友监督与反馈：[LINUX DO](https://linux.do/)
+Подходит:
 
-## 简体中文
+- ошибки рантайма, падения сборки, тестов и деплоя;
+- зависимости, SDK, фреймворки, использование API и блокеры интеграции;
+- поиск шаблона реализации, формы конфигурации, тестовых фикстур, пути миграции, выбор инструмента или библиотеки;
+- сравнение нескольких опенсорсных проектов с обоснованием по звёздам, лицензии, активности, цене адаптации и рискам;
+- извлечение работающего шаблона починки из issue, PR, release notes, примеров и тестов;
+- ответ на вопрос, есть ли у конкретной инженерной задачи проверенный путь в опенсорсе.
 
-### 项目定位
+Не подходит:
 
-PavedPath Code（代码版）帮助 Agent 避免为代码问题重复造轮子。它先定义本地工程问题，再用 GitHub 和开源证据寻找已经被走通的路径：成熟项目、issue、PR、discussion、代码、示例、release notes 和官方项目文档。最后，它把最强证据转译为本地最小适配、验证命令和风险边界。
+- правки текста, мелкие локальные рефакторинги и изменения, где ответ уже задан кодовой базой;
+- некодовые задачи;
+- задачи с явным запретом на сеть и исследование GitHub;
+- приватные репозитории без разрешения, учётные данные, cookie, токены, внутренний код компании, чувствительные логи и продовые данные;
+- продовые инциденты, где ещё не проверены локальные логи, состояние рантайма и официальная документация: опенсорсный поиск не заменяет разбор на месте.
 
-它不是“搜索 GitHub 链接”的工具。GitHub 是主要证据源，目标是找到开源世界已经验证过的实现路径，并判断这条路径是否适合当前代码库。
+## Возможности
 
-### 适用范围
-
-适合使用 PavedPath Code：
-
-- bug、runtime error、build/test/deploy failure；
-- dependency、SDK、framework、API usage 或 integration blocker；
-- 需要寻找实现模式、配置形态、测试夹具、迁移路径或工具/库选型；
-- 需要比较多个开源项目，并说明 Stars、license、活跃度、适配成本和风险；
-- 需要从 issue、PR、release notes、示例代码或测试中提取可落地的修复模式；
-- 需要回答“这个工程问题在开源世界是否已有可验证路径”。
-
-不要用于：
-
-- 文案、小型本地重构、或代码库已经明确给出答案的改动；
-- 非代码问题、生活问题、自媒体工作流、学习方法、消费决策等未来通用版 PavedPath 才应覆盖的场景；
-- 用户明确禁止联网或 GitHub 研究的任务；
-- 未获授权的私有仓库、凭证、cookie、token、公司内部代码、敏感日志、production data 或不可公开上下文；
-- 生产事故尚未完成本地日志、运行状态和官方文档核对时，用开源搜索替代现场排障。
-
-### Features
-
-| 能力 | 已包含内容 | 边界 |
+| Возможность | Что включено | Граница |
 | --- | --- | --- |
-| GitHub CLI first | 默认使用 `gh search repos`、`gh search issues`、`gh search prs`、`gh search code`、`gh repo view`、`gh pr view`、`gh issue view` 和 `gh api` | 不依赖仓库内置搜索脚本；`gh` 结果仍需深读和本地验证 |
-| 问题证据搜索 | 围绕错误文本、包名、API 名、版本号、配置键、框架和失败命令搜索 issues、PRs、code、examples、release notes | 只把 GitHub 当证据来源，不把链接数量或 Stars 当成结论 |
-| 仓库候选研究 | 按问题匹配、Stars、license、活跃度、示例质量和适配成本比较公开仓库 | Stars 是成熟度信号，不会覆盖 maintainer evidence、merged PR、official examples 或可复现代码 |
-| 条件子代理研究 | 当问题跨多个生态、查询族或证据面时，可拆给子代理并行只读研究 | 子代理不是默认强制；controller 仍负责范围控制、去重、排序、本地适配和最终验证 |
-| 输出证据闭环 | `SKILL.md` 要求记录 search path、subagent used/skipped、key evidence、rejected options、verification standard | 使用子代理时必须留下 subagent trace，避免“搜了很多”但没有可复核证据 |
-| 智能体集成 | `SKILL.md` 和 `agents/openai.yaml` 提供可复用 Skill 指令、展示信息和默认 prompt | 可安装到 Codex、Claude Code、Cursor Agent 或其他支持本地指令/Skill 的智能体环境 |
+| Нативные инструменты OMP | `read issue://<N>`, `read pr://<N>`, `read pr://<N>/diff`, `xd://github` с `op: search_*` и `op: file_read`, субагенты `scout` и `librarian` через `task` | Кешируемый и дешёвый доступ там, где он есть; при отсутствии — `gh` |
+| GitHub CLI как основа | `gh search repos`, `gh search issues`, `gh search prs`, `gh search code`, `gh repo view`, `gh pr view`, `gh issue view`, `gh api` | Собственные поисковые скрипты не нужны; результат `gh` всё равно требует глубокого чтения и локальной проверки |
+| Поиск доказательств по задаче | Поиск по тексту ошибки, имени пакета и API, номеру версии, ключу конфигурации, фреймворку и упавшей команде в issue, PR, коде, примерах и release notes | GitHub — источник доказательств; число ссылок и звёзд не является выводом |
+| Исследование кандидатов | Сравнение публичных репозиториев по попаданию в задачу, звёздам, лицензии, активности, качеству примеров и цене адаптации | Звёзды — сигнал зрелости; они не перевешивают подтверждение мейнтейнера, влитый PR, официальные примеры и воспроизводимый код |
+| Условное параллельное исследование | Разделение работы между read-only субагентами, когда задача покрывает несколько экосистем, семейств запросов или поверхностей доказательств | Субагенты не обязательны; контроллер отвечает за границы охвата, дедупликацию, ранжирование, адаптацию и финальную проверку |
+| Замкнутый контур доказательств | `SKILL.md` требует фиксировать путь поиска, факт использования субагентов, ключевые доказательства, отклонённые варианты и стандарт проверки | Трасса субагентов обязательна при их использовании: «много искали» без проверяемых ссылок не принимается |
 
-### 工作流
+## Рабочий процесс
 
 ```mermaid
 flowchart LR
-  A["Local software engineering problem"] --> B["Frame symptom, versions, constraints"]
-  B --> C["Search GitHub and open-source evidence"]
-  C --> D["Rank evidence and repositories"]
-  D --> E["Deep-read strongest matches"]
-  E --> F["Extract proven path and risks"]
-  F --> G["Map to local adaptation"]
-  G --> H["Verify with tests, builds, requests, or logs"]
+  A["Локальная инженерная задача"] --> B["Симптом, версии, ограничения"]
+  B --> C["Поиск доказательств в GitHub"]
+  C --> D["Ранжирование доказательств"]
+  D --> E["Глубокое чтение сильнейших"]
+  E --> F["Извлечение пути и рисков"]
+  F --> G["Локальная адаптация"]
+  G --> H["Проверка тестом, сборкой, запросом"]
 ```
 
-默认研究路径：
+Порядок по умолчанию:
 
-1. 先在本地定义问题：目标、症状、错误文本、版本、运行环境、约束和已尝试方案。
-2. 选择证据面：错误和回归优先搜 issue/PR/release/code；能力选型优先搜仓库候选；实现卡点两者都用。
-3. 判断是否需要子代理。只有当任务跨多个独立生态、查询族或证据面时才拆分；否则说明跳过原因。
-4. 用 `gh` 和精确查询搜索公开 GitHub：错误文本、包名、API 名、版本号、配置键、框架和失败命令。
-5. 按问题匹配度、证据强度、本地适用性、可操作性和项目成熟度排序。
-6. 深读最强候选，提取可复用接口、配置、测试、工作流、风险和 license 边界。
-7. 合并、去重并拒绝不适配候选；使用子代理时由 controller 直接核验关键 claim。
-8. 输出本地修复或实施建议，并用测试、构建、真实请求、日志或人工检查完成验证标准。
+1. Описать локальную задачу: цель, симптом, текст ошибки, версии, окружение, ограничения и уже испробованное.
+2. Выбрать поверхность доказательств: ошибки и регрессии — issue, PR, релизы и код; выбор возможности — репозитории-кандидаты; блокер реализации — и то, и другое.
+3. Решить, нужны ли субагенты. Делить работу только когда задача покрывает независимые экосистемы, семейства запросов или поверхности доказательств; иначе назвать причину, почему обошлись без них.
+4. Искать по публичному GitHub точными запросами: текст ошибки, имя пакета и API, номер версии, ключ конфигурации, фреймворк, упавшая команда.
+5. Ранжировать по попаданию в задачу, силе доказательства, локальной применимости, готовности к действию и зрелости проекта.
+6. Глубоко прочитать сильнейших кандидатов, извлечь переиспользуемые интерфейсы, конфигурацию, тесты, процессы, риски и границы лицензии.
+7. Объединить, дедуплицировать и отклонить неподходящее; при использовании субагентов контроллер сам проверяет ключевые утверждения.
+8. Выдать локальную починку или план реализации с конкретным стандартом проверки: тест, сборка, реальный запрос, логи или ручной осмотр.
 
-### Installation
+## Установка
 
-安装到你的智能体 active skill / instructions 目录。下面示例使用 `~/.codex/skills`；Claude Code、Cursor Agent、ChatGPT Agent 或其他智能体请按自己的本地指令目录改写路径：
+### OMP
 
 ```bash
-mkdir -p ~/.codex/skills
-git clone https://github.com/Jia-Ethan/pavedpath-code.git \
-  ~/.codex/skills/pavedpath-code
+mkdir -p ~/.omp/agent/skills
+git clone https://github.com/I1eanch/opensource-finder.git \
+  ~/.omp/agent/skills/opensource-finder
 ```
 
-更新已有安装：
+Скилл появится в реестре при следующем запуске OMP. Проверка установки:
 
 ```bash
-git -C ~/.codex/skills/pavedpath-code pull --ff-only
+omp -p --no-session 'Прочитай skill://opensource-finder и выведи значение поля name.'
 ```
 
-建议按需安装并登录 GitHub CLI：
+### Другие агентные рантаймы
+
+Клонировать в каталог активных скиллов или инструкций своего рантайма, например `~/.codex/skills/opensource-finder`.
+
+Обновление существующей установки:
+
+```bash
+git -C ~/.omp/agent/skills/opensource-finder pull --ff-only
+```
+
+Скилл опирается на GitHub CLI:
 
 ```bash
 gh auth status
 ```
 
-这个 Skill 不绑定任何具体模型或智能体。它吸收了多 agent 搜索建议，但保持平台无关；真正的约束在于问题拆分、证据链接、去重、controller 复核和本地验证。
+Раздел с нативными инструментами описан для OMP; в других рантаймах работает ветка на `gh`, поэтому скилл остаётся платформо-независимым.
 
-### Usage examples
+## Примеры использования
 
-在智能体中调用 Skill：
+Вызов в агенте:
 
 ```text
-Use $pavedpath-code to investigate this Vite build error.
-Find matching GitHub issues, merged PRs, release notes, and reusable fixes,
-then recommend the smallest local adaptation and verification command.
+Через $opensource-finder разберись с этой ошибкой сборки Vite.
+Найди совпадающие issue, влитые PR и release notes, предложи минимальную
+локальную адаптацию и команду проверки.
 ```
 
-搜索仓库候选：
+Поиск готовой реализации фичи:
+
+```text
+Через $opensource-finder найди опенсорсные проекты для парсинга Telegram-каналов.
+Сравни по попаданию в задачу, лицензии, активности и цене адаптации,
+дай таблицу кандидатов и план переноса.
+```
+
+Поиск кандидатов через CLI:
 
 ```bash
 gh search repos "browser automation agent" \
@@ -153,7 +142,7 @@ gh search repos "browser automation agent" \
   --json fullName,url,description,stargazersCount,forksCount,language,license,pushedAt,isArchived,openIssuesCount
 ```
 
-搜索某个仓库内的 issue：
+Поиск issue в конкретном репозитории:
 
 ```bash
 gh search issues '"Cannot find module" "Node.js 22"' \
@@ -164,7 +153,7 @@ gh search issues '"Cannot find module" "Node.js 22"' \
   --json title,url,state,updatedAt,commentsCount,repository,body
 ```
 
-搜索 merged PR：
+Поиск влитых PR:
 
 ```bash
 gh search prs '"ERR_PACKAGE_PATH_NOT_EXPORTED" vite plugin' \
@@ -176,199 +165,58 @@ gh search prs '"ERR_PACKAGE_PATH_NOT_EXPORTED" vite plugin' \
   --json title,url,state,updatedAt,commentsCount,repository,body
 ```
 
-查看仓库基本信息：
+## Контракт вывода
 
-```bash
-gh repo view owner/repo \
-  --json nameWithOwner,url,description,stargazerCount,forkCount,licenseInfo,primaryLanguage,pushedAt,repositoryTopics,homepageUrl
-```
+Когда скилл существенно влияет на вывод, ответ содержит:
 
-### Output contract
+- профиль локальной задачи: цель, симптом, версии, окружение и ограничения;
+- путь поиска: запросы, пройденные поверхности, источники кандидатов и факт использования или неиспользования субагентов;
+- трассу субагентов при их использовании: область, поверхности доказательств, ключевые находки, отклонённые кандидаты, результат дедупликации, проверенные контроллером утверждения;
+- кандидатов: репозиторий, звёзды, форки, язык, лицензия, активность, суть, обоснование совпадения и цена адаптации;
+- ключевые доказательства: ссылки на issue, PR, код, примеры, release notes или документацию с обоснованием совпадения;
+- рекомендацию: что переиспользовать напрямую, что адаптировать локально, что не копировать;
+- риски и отклонённые варианты: устаревшие версии, расхождения, лицензия, приватность, безопасность, риски деплоя;
+- стандарт проверки: тест, сборка, команда воспроизведения, реальный запрос или ручной осмотр;
+- уровень уверенности, когда доказательства слабы или сильного совпадения не нашлось.
 
-当 PavedPath Code 实质影响结论时，回答应包含：
+## Безопасность
 
-- 本地问题画像：目标、症状、版本、环境和约束。
-- 搜索路径：查询词、搜索面、候选来源，以及是否使用或跳过子代理。
-- 子代理 trace：仅在使用子代理时输出，包含 scope、evidence surfaces、key findings、rejected candidates、deduplication results、controller verified claims。
-- 候选项目：repo、Stars、forks、语言、license、活跃度、基本内容、匹配理由和适配成本。
-- 关键证据：issue、PR、代码、示例、release notes 或文档链接，以及为什么匹配。
-- 推荐方案：直接复用什么、本地适配什么、避免复制什么。
-- 风险和拒绝项：旧版本、不适配、license、隐私、安全或部署风险。
-- 验证标准：测试、构建、复现命令、真实请求或人工检查。
-- 置信度：证据弱或没有强匹配时必须明确说明。
+- По умолчанию исследуется только публичный GitHub. Приватные репозитории требуют явного разрешения пользователя и очерченных границ.
+- Токены GitHub, cookie, пароли, ключи API, содержимое приватных репозиториев, внутренний контекст, чувствительные логи, продовые данные и учётные данные не попадают в промпты, вывод, логи, README, скрипты, файлы памяти и задания субагентам.
+- `gh auth status` запускается только после отказа с 403, 429, ошибкой доступа к приватному репозиторию или явным сообщением о неавторизованности.
+- Приоритет — переиспользование публичных API, формы конфигурации, процессов, шаблонов тестов и архитектурных идей; при переносе кода сначала проверяются лицензия и требования к указанию авторства.
+- Для задач безопасности, платежей, аутентификации, инфраструктуры и продовой эксплуатации опенсорсные доказательства сверяются с текущей официальной документацией или официальным репозиторием.
 
-### Security
+## Планы
 
-- 默认只研究公开 GitHub 内容。私有仓库必须由用户明确授权并限定范围。
-- 不要把 GitHub token、cookie、密码、API key、私有仓库内容、内部上下文、敏感日志、production data 或凭证写入 prompt、输出、日志、README、脚本或记忆文件。
-- 不要把 token、cookie、私有仓库内容、敏感日志、secrets、production data 或凭证交给子代理。
-- 只有在 `gh` 命令明确出现 403、429、私有仓库授权错误或未登录提示时，才需要检查 `gh auth status`。
-- 避免复制大段第三方代码。优先复用公开 API、配置形态、工作流、测试模式和架构思路；如需代码复用，先检查 license 和归属要求。
-- 对安全、支付、鉴权、基础设施或生产运维类问题，GitHub 证据必须与当前官方文档或官方仓库交叉验证。
+Уже есть:
 
-### Roadmap
+- основной вход скилла: `SKILL.md`;
+- метаданные для агентов: `agents/openai.yaml`;
+- рубрика оценки и плейбук извлечения: `references/`;
+- раздел нативных инструментов OMP и шаблоны запросов GitHub CLI;
+- условное руководство по параллельному исследованию.
 
-当前已包含：
+Куда развивать:
 
-- Skill 主入口：`SKILL.md`
-- OpenAI agent metadata：`agents/openai.yaml`
-- 研究评分和提取参考：`references/`
-- GitHub CLI first 的查询模板和输出契约
-- 条件式 subagent / parallel research guidance
+- более структурированный вывод по JSON-схеме;
+- шаблоны запросов под распространённые языковые экосистемы;
+- офлайн-примеры для демонстрации формата вывода без обращения к GitHub API;
+- CI-проверка ссылок, формата Markdown и паттернов чувствительных данных.
 
-可改进方向：
+Чего скилл не обещает:
 
-- 增加更结构化的 JSON schema 输出。
-- 增加针对常见语言生态的查询模板。
-- 增加离线示例夹具，方便在不访问 GitHub API 时演示输出格式。
-- 增加 CI，检查 Markdown 链接、格式和敏感信息模式。
+- автоматически править локальный код;
+- автоматически отличать правдивые результаты GitHub от ложных;
+- гарантировать, что у каждой инженерной задачи есть публичный ответ;
+- читать или копировать приватный код без разрешения.
 
-不会承诺：
+## Происхождение
 
-- 自动修复本地代码。
-- 自动判断所有 GitHub 结果真假。
-- 保证每个工程问题都有公开答案。
-- 在未授权范围内读取或复制私有代码。
+Форк [Jia-Ethan/pavedpath-code](https://github.com/Jia-Ethan/pavedpath-code). Отличия форка: контент полностью на русском, скилл переименован в `opensource-finder`, добавлен раздел нативных инструментов OMP, убрана двуязычная структура README.
 
-## English
+История переименований описана в [MIGRATION.md](MIGRATION.md).
 
-### Project positioning
+## Лицензия
 
-PavedPath Code is the code-focused edition of PavedPath. It helps agents avoid reinventing solutions for software engineering problems by finding proven implementation paths from GitHub repositories, issues, pull requests, discussions, code examples, release notes, and open-source evidence.
-
-It is not a generic GitHub link search. GitHub is the primary evidence source; the goal is to find a path the open-source world has already walked, decide whether it fits the local codebase, and adapt the strongest pattern with minimal, verifiable changes.
-
-This repository is intentionally scoped to code and engineering work. The future general-purpose PavedPath is out of scope.
-
-### Scope
-
-Use PavedPath Code for:
-
-- bugs, runtime errors, build/test/deploy failures;
-- dependency, SDK, framework, API usage, or integration blockers;
-- implementation patterns, configuration shapes, test fixtures, migration paths, or engineering tool/library selection;
-- comparing open-source projects by Stars, license, activity, fit, adaptation cost, and risk;
-- extracting actionable fixes from issues, PRs, release notes, examples, or tests;
-- answering whether a concrete engineering problem already has a proven open-source path.
-
-Do not use it for:
-
-- copy edits, tiny local refactors, or changes where the existing codebase already dictates the answer;
-- non-code life decisions, self-media workflows, study methods, consumer decisions, or broad general research;
-- tasks where the user explicitly forbids network or GitHub research;
-- unauthorized private repositories, credentials, cookies, tokens, internal company code, sensitive logs, production data, or non-public context;
-- production incidents where local logs, runtime state, and official docs have not been checked first.
-
-### How it works
-
-Default research path:
-
-1. Frame the local problem: goal, symptom, error text, versions, runtime, constraints, and attempted fixes.
-2. Choose the evidence surface: issues, PRs, releases, and code for errors; repository candidates for reusable capabilities; both for implementation blockers.
-3. Decide whether subagents are useful. Use them only when the task spans independent ecosystems, query families, or evidence surfaces; otherwise state why they were skipped.
-4. Search public GitHub with `gh` and targeted queries: exact errors, package names, API names, versions, config keys, frameworks, and failing commands.
-5. Rank by problem fit, evidence strength, local applicability, actionability, and project maturity.
-6. Deep-read the strongest candidates and extract reusable interfaces, configuration, tests, workflows, risks, and license boundaries.
-7. Merge, deduplicate, and reject weak candidates; when subagents were used, the controller directly verifies the strongest claims.
-8. Produce a local fix or implementation recommendation with a concrete verification command, request, test, log, or manual check.
-
-### Installation
-
-Install into your agent runtime's active local skills/instructions directory. The example below uses `~/.codex/skills`; adapt the path for Claude Code, Cursor Agent, ChatGPT Agent, or another agent runtime:
-
-```bash
-mkdir -p ~/.codex/skills
-git clone https://github.com/Jia-Ethan/pavedpath-code.git \
-  ~/.codex/skills/pavedpath-code
-```
-
-Update an existing installation:
-
-```bash
-git -C ~/.codex/skills/pavedpath-code pull --ff-only
-```
-
-Install and authenticate GitHub CLI when needed:
-
-```bash
-gh auth status
-```
-
-### Usage examples
-
-Invoke the Skill in an agent:
-
-```text
-Use $pavedpath-code to investigate this Vite build error.
-Find matching GitHub issues, merged PRs, release notes, and reusable fixes,
-then recommend the smallest local adaptation and verification command.
-```
-
-Search repository candidates:
-
-```bash
-gh search repos "browser automation agent" \
-  --archived=false \
-  --sort stars \
-  --order desc \
-  --limit 10 \
-  --json fullName,url,description,stargazersCount,forksCount,language,license,pushedAt,isArchived,openIssuesCount
-```
-
-Search matching issues in one repository:
-
-```bash
-gh search issues '"Cannot find module" "Node.js 22"' \
-  --repo owner/repo \
-  --sort updated \
-  --order desc \
-  --limit 10 \
-  --json title,url,state,updatedAt,commentsCount,repository,body
-```
-
-Inspect repository basics:
-
-```bash
-gh repo view owner/repo \
-  --json nameWithOwner,url,description,stargazerCount,forkCount,licenseInfo,primaryLanguage,pushedAt,repositoryTopics,homepageUrl
-```
-
-### Output contract
-
-When PavedPath Code materially affects an answer, the answer should include:
-
-- Local problem profile: goal, symptom, versions, environment, and constraints.
-- Search path: queries, GitHub/open-source surfaces, discovery methods used, and whether subagents were used or skipped.
-- Subagent trace: only when subagents were used; include scope, evidence surfaces, key findings, rejected candidates, deduplication results, and controller verified claims.
-- Repository candidates: repo, Stars, forks, language, license, activity, basic content, fit rationale, and adaptation cost.
-- Key evidence: links to issues, PRs, code, examples, release notes, or docs, with match rationale.
-- Recommended solution: what to reuse directly, what to adapt locally, and what to avoid copying.
-- Rejected or risky options: stale versions, mismatches, license, privacy, security, or deployment risks.
-- Verification standard: test, build, reproduction command, real request, log, or manual check.
-- Confidence label when evidence is weak or no strong open-source solution was found.
-
-### Security
-
-- Research public GitHub content by default. Private repositories require explicit user authorization and a bounded scope.
-- Do not write GitHub tokens, cookies, passwords, API keys, private repository contents, internal context, sensitive logs, production data, or credentials into prompts, outputs, logs, README files, scripts, or memory files.
-- Do not pass tokens, cookies, private repository contents, sensitive logs, secrets, production data, or credentials to subagents.
-- Only check `gh auth status` after a `gh` command reports 403, 429, a private repository authorization error, or an explicit not-authenticated message.
-- Avoid copying large chunks of third-party code. Prefer public APIs, configuration shapes, workflows, test patterns, and architecture ideas; check license and attribution obligations before reusing code.
-- For security, payments, auth, infrastructure, or production operations, cross-check GitHub evidence against current official docs or official repositories.
-
-## Migration
-
-`github-solution-research` has been renamed to **PavedPath Code**.
-
-Previous behavior is preserved; this is a naming and positioning update. New installations should use:
-
-```bash
-git clone https://github.com/Jia-Ethan/pavedpath-code.git \
-  ~/.codex/skills/pavedpath-code
-```
-
-Do not keep an old `github-solution-research/SKILL.md` under an active skill root together with `pavedpath-code/SKILL.md`; an agent runtime may recursively load both.
-
-## License
-
-MIT License. See [LICENSE](LICENSE).
+MIT. См. [LICENSE](LICENSE).

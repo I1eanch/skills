@@ -1,5 +1,4 @@
 interface:
-  display_name: "PavedPath Code"
-  alias: "PavedPath Code（代码版）"
-  short_description: "通用代码 Skill：从 GitHub 和开源证据中寻找已走通路径，并转译为可验证的本地实现。"
-  default_prompt: "Use $pavedpath-code to frame my software engineering problem, search GitHub and open-source evidence with gh first, conditionally use subagents only when they improve research coverage, list relevant project basics including Stars when a repository-level solution applies, record subagent trace if used, then recommend the smallest local adaptation and verification path."
+  display_name: "Opensource Finder"
+  short_description: "Скилл поиска уже пройденного пути: находит решение инженерной задачи в GitHub и опенсорсе и переносит его в локальный код проверяемой правкой."
+  default_prompt: "Через $opensource-finder опиши мою инженерную задачу, найди доказательства в GitHub и опенсорсе, начиная с нативных инструментов OMP и GitHub CLI, задействуй субагентов только когда это расширяет охват исследования, приведи таблицу кандидатов со звёздами и лицензией, если решением может быть готовый проект, оставь трассу субагентов при их использовании, затем предложи минимальную локальную адаптацию и способ проверки."

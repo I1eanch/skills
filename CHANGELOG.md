@@ -1,11 +1,19 @@
-# Changelog
+# Изменения
+
+## 2026-08-14
+
+- Весь контент репозитория переведён на русский: `SKILL.md`, `README.md`, `references/`, `MIGRATION.md`, `CHANGELOG.md`, `agents/openai.yaml`. Текст лицензии MIT оставлен в оригинале.
+- Скилл переименован из `pavedpath-code` в `opensource-finder`, чтобы имя скилла совпадало с именем репозитория.
+- Добавлен раздел нативных инструментов OMP: `read issue://<N>`, `read pr://<N>`, `read pr://<N>/diff`, `xd://github` с `op: search_*` и `op: file_read`, `op: pr_checkout`, субагенты `scout` и `librarian` через `task`. GitHub CLI остаётся основой, когда нужны поля и фильтры, которых нет в нативных инструментах.
+- Указатели на нативные инструменты добавлены в `references/research-rubric.md` и `references/extraction-playbook.md`.
+- В `description` скилла добавлены триггеры вызова на русском.
+- README избавлен от двуязычной структуры: остался один язык вместо параллельных китайской и английской версий.
+- Раздел про переименование убран из `SKILL.md`: единственный источник этой информации — `MIGRATION.md`.
 
 ## 2026-06-30
 
-- Reframed README language from Codex-specific wording to a reusable, agent-agnostic Skill.
-- Added a copy-to-agent installation prompt for Codex, Claude Code, Cursor Agent, ChatGPT Agent, or other agent runtimes.
-- Renamed **GitHub Solution Research** to **PavedPath Code**.
-- Changed the skill identifier from `github-solution-research` to `pavedpath-code`.
-- Repositioned the project as the code-focused edition of PavedPath: a reusable Skill for finding proven implementation paths from GitHub and open-source evidence, then adapting them to local software engineering work.
-- Preserved the previous behavior: problem-first framing, GitHub CLI-first research, evidence ranking, minimal local adaptation, and verification-first output.
-- Added explicit boundaries that the future general-purpose PavedPath is out of scope for this repository.
+- Язык README переведён с формулировок под конкретный рантайм на переиспользуемый скилл, не привязанный к платформе.
+- Добавлен промпт для установки через агента.
+- **GitHub Solution Research** переименован в **PavedPath Code**, идентификатор скилла изменён с `github-solution-research` на `pavedpath-code`.
+- Проект перепозиционирован как переиспользуемый скилл поиска проверенных путей реализации по GitHub и опенсорсным доказательствам с последующим переносом в локальную работу.
+- Сохранено прежнее поведение: постановка задачи первой, GitHub CLI как основа, ранжирование доказательств, минимальная локальная адаптация и вывод с обязательной проверкой.
