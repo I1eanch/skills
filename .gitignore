@@ -13,6 +13,7 @@
 !/academic-paper-review/
 !/deep-research/
 !/chart-visualization/
+!/newsletter-generation/
 
 # Локальное окружение data-analysis (duckdb, openpyxl) — не версионируется.
 /data-analysis/.venv/
