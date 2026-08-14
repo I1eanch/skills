@@ -307,7 +307,7 @@ After the analysis framework is generated, it is handed off to **other skills of
 
 | Need | Skill to use |
 |---|---|
-| Web research by the Search Keywords | `research` for a focused pass, `hyperresearch` for a deep multi-round investigation |
+| Web research by the Search Keywords | `deep-research` — the default: four-phase multi-angle collection, designed to consume the P0/P1/P2 requirements of this framework. `hyperresearch` when the subject needs a deep multi-round investigation, `research` when the result must be filed in a repository |
 | Numbers from spreadsheets, exports, logs | `data-analysis` (Excel/CSV via DuckDB) |
 | Repository or open-source subject | `github-deep-research`, `opensource-finder` |
 | Academic evidence base | `systematic-literature-review` (survey across arXiv papers), `academic-paper-review` (one specific paper) |
@@ -324,7 +324,7 @@ The collecting skill must:
 
 > **This skill does NOT perform data collection.** It only produces the framework (Phase 1) and the final report (Phase 2).
 >
-> **Chart Generation**: charts are produced by `visual-explainer` (self-contained HTML), `recharts` (React charts) or `ckm-slides` (Chart.js). Chart generation can be deferred to the beginning of Phase 2 — see Step 2.3. Note that a static `.png` per chart is not available in this instance: embed rendered HTML/SVG output or fall back to comparison tables.
+> **Chart Generation**: pick the chart type and shape the data with `chart-visualization` (catalogue of 26 types with per-type data specs), then render with `visual-explainer` (self-contained HTML), `recharts` (React) or `ckm-slides` (Chart.js). Chart generation can be deferred to the beginning of Phase 2 — see Step 2.3. Note that a static `.png` per chart is not available in this instance: embed rendered HTML/SVG output or fall back to comparison tables.
 
 ---
 
@@ -388,7 +388,7 @@ Before writing the report, generate all planned charts from the Analysis Framewo
 2. **Prepare Chart Data**: For each chart task, extract the corresponding data points from the **Data Summary**.
    > **CRITICAL**: Use ONLY the numbers provided in the Data Summary. Do NOT invent or "smooth" data to make charts look better. If data points are missing, the chart must reflect that reality (e.g., broken line or missing bar), or the chart type must be adjusted.
 
-3. **Delegate to Visualization Skill**: Invoke the available visualization skill (`visual-explainer`, `recharts` or `ckm-slides`) for each chart task with:
+3. **Delegate to Visualization Skills**: first `chart-visualization` — confirm the chart type fits the data and read `references/generate_<type>.md` for the exact required fields; then the renderer (`visual-explainer`, `recharts` or `ckm-slides`) with:
    - Chart type and title
    - Structured data
    - Axis labels and formatting preferences
@@ -630,7 +630,7 @@ reasoning_locale = en
 
 - This skill operates in **two phases** of a multi-step agentic workflow:
   - **Phase 1** produces the analysis framework and data collection requirements
-  - **Data collection** is performed by other skills (`research`, `hyperresearch`, `data-analysis`, `github-deep-research`, `systematic-literature-review`, `academic-paper-review`)
+  - **Data collection** is performed by other skills (`deep-research` by default, plus `hyperresearch`, `research`, `data-analysis`, `github-deep-research`, `systematic-literature-review`, `academic-paper-review`); charts go through `chart-visualization` for type selection and a renderer for output
   - **Phase 2** receives the collected data and produces the final report
 - Dynamic titling: **Rewrite** topics from the Framework into professional, concise subject-based headers
 - The Conclusion section must contain **NO** detailed recommendations — those belong in the preceding body chapters

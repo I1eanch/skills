@@ -13,6 +13,8 @@
 | [`consulting-analysis`](consulting-analysis/) | Консалтинговые отчёты уровня McKinsey/BCG в две фазы: каркас анализа с выбором моделей и требованиями к данным, затем финальный отчёт по собранным данным |
 | [`systematic-literature-review`](systematic-literature-review/) | Систематический обзор литературы по arXiv: поиск работ, параллельное извлечение метаданных субагентами, синтез тем, отчёт в APA/IEEE/BibTeX |
 | [`academic-paper-review`](academic-paper-review/) | Рецензия на одну научную статью уровня peer review: методология, вклад, позиционирование в литературе, рекомендации |
+| [`deep-research`](deep-research/) | Многоракурсный веб-ресёрч в четыре фазы: разведка, углубление по измерениям, набор разных типов свидетельств, проверка полноты. Штатный поставщик данных для `consulting-analysis` |
+| [`chart-visualization`](chart-visualization/) | Каталог 26 типов графиков: выбор уместного типа под характер данных и спецификация обязательных полей для каждого. Рендер — локальными средствами |
 
 ## Структура
 
@@ -35,9 +37,16 @@
 │   ├── scripts/arxiv_search.py
 │   ├── templates/          # apa, ieee, bibtex
 │   └── evals/              # 5 сценариев + 20 триггер-кейсов
-└── academic-paper-review/
-    └── SKILL.md
+├── academic-paper-review/
+│   └── SKILL.md
+├── deep-research/
+│   └── SKILL.md
+└── chart-visualization/
+    ├── SKILL.md
+    └── references/          # 26 спецификаций типов графиков, переведены на русский
 ```
+
+Скиллы связаны в конвейер аналитики: `consulting-analysis` строит каркас с требованиями к данным → `deep-research` и `data-analysis` собирают факты и числа → `chart-visualization` выбирает типы графиков → рендер локальными средствами → `consulting-analysis` собирает финальный отчёт. Академическая доказательная база при необходимости приходит из `systematic-literature-review` и `academic-paper-review`.
 
 Каждый скилл — каталог с `SKILL.md`, где frontmatter (`name`, `description`) определяет, когда агент его подхватит. Описание пишется двуязычным: русские формулировки задач плюс английские технические триггеры, чтобы срабатывало независимо от языка запроса.
 
