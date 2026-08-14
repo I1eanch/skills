@@ -9,6 +9,8 @@
 !/opensource-finder/
 !/data-analysis/
 !/consulting-analysis/
+!/systematic-literature-review/
+!/academic-paper-review/
 
 # Локальное окружение data-analysis (duckdb, openpyxl) — не версионируется.
 /data-analysis/.venv/

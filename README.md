@@ -11,6 +11,8 @@
 | [`opensource-finder`](opensource-finder/) | Поиск уже пройденного пути: находит решение инженерной задачи в GitHub и опенсорсе и переносит его в локальный код проверяемой правкой |
 | [`data-analysis`](data-analysis/) | Анализ Excel/CSV через SQL-движок DuckDB: схема, произвольные запросы, статистические сводки, джойны между файлами, экспорт в CSV/JSON/Markdown |
 | [`consulting-analysis`](consulting-analysis/) | Консалтинговые отчёты уровня McKinsey/BCG в две фазы: каркас анализа с выбором моделей и требованиями к данным, затем финальный отчёт по собранным данным |
+| [`systematic-literature-review`](systematic-literature-review/) | Систематический обзор литературы по arXiv: поиск работ, параллельное извлечение метаданных субагентами, синтез тем, отчёт в APA/IEEE/BibTeX |
+| [`academic-paper-review`](academic-paper-review/) | Рецензия на одну научную статью уровня peer review: методология, вклад, позиционирование в литературе, рекомендации |
 
 ## Структура
 
@@ -26,8 +28,15 @@
 │   ├── SKILL.md
 │   ├── scripts/analyze.py
 │   └── .venv/              # локальное окружение, не версионируется
-└── consulting-analysis/
-    └── SKILL.md            # только методология, без скриптов
+├── consulting-analysis/
+│   └── SKILL.md            # только методология, без скриптов
+├── systematic-literature-review/
+│   ├── SKILL.md
+│   ├── scripts/arxiv_search.py
+│   ├── templates/          # apa, ieee, bibtex
+│   └── evals/              # 5 сценариев + 20 триггер-кейсов
+└── academic-paper-review/
+    └── SKILL.md
 ```
 
 Каждый скилл — каталог с `SKILL.md`, где frontmatter (`name`, `description`) определяет, когда агент его подхватит. Описание пишется двуязычным: русские формулировки задач плюс английские технические триггеры, чтобы срабатывало независимо от языка запроса.

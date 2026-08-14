@@ -310,6 +310,7 @@ After the analysis framework is generated, it is handed off to **other skills of
 | Web research by the Search Keywords | `research` for a focused pass, `hyperresearch` for a deep multi-round investigation |
 | Numbers from spreadsheets, exports, logs | `data-analysis` (Excel/CSV via DuckDB) |
 | Repository or open-source subject | `github-deep-research`, `opensource-finder` |
+| Academic evidence base | `systematic-literature-review` (survey across arXiv papers), `academic-paper-review` (one specific paper) |
 
 The collecting skill must:
 
@@ -629,7 +630,7 @@ reasoning_locale = en
 
 - This skill operates in **two phases** of a multi-step agentic workflow:
   - **Phase 1** produces the analysis framework and data collection requirements
-  - **Data collection** is performed by other skills (`research`, `hyperresearch`, `data-analysis`, `github-deep-research`)
+  - **Data collection** is performed by other skills (`research`, `hyperresearch`, `data-analysis`, `github-deep-research`, `systematic-literature-review`, `academic-paper-review`)
   - **Phase 2** receives the collected data and produces the final report
 - Dynamic titling: **Rewrite** topics from the Framework into professional, concise subject-based headers
 - The Conclusion section must contain **NO** detailed recommendations — those belong in the preceding body chapters
