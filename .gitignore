@@ -1,30 +1,13 @@
-.DS_Store
-Thumbs.db
+# Монорепо личных скиллов OMP.
+# Корень репозитория совпадает с ~/.omp/agent/skills, где лежат и сторонние
+# скиллы, поэтому по умолчанию игнорируется всё, а свои скиллы включаются явно.
 
-__pycache__/
-*.py[cod]
-*$py.class
-.python-version
+/*
 
-.venv/
-venv/
-env/
+!/.gitignore
+!/README.md
+!/opensource-finder/
+!/data-analysis/
 
-.env
-.env.*
-!.env.example
-
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-.coverage
-coverage.xml
-htmlcov/
-
-build/
-dist/
-*.egg-info/
-
-*.log
-*.tmp
-.cache/
+# Локальное окружение data-analysis (duckdb, openpyxl) — не версионируется.
+/data-analysis/.venv/
