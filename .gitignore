@@ -8,6 +8,7 @@
 !/README.md
 !/opensource-finder/
 !/data-analysis/
+!/consulting-analysis/
 
 # Локальное окружение data-analysis (duckdb, openpyxl) — не версионируется.
 /data-analysis/.venv/
