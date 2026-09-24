@@ -10,31 +10,42 @@ const guard = await import("./algorithm-guard.ts");
 const { validatePrd, runDoctor, formatDoctor, WORK_ROOT } = guard;
 assert.equal(WORK_ROOT, join(home, ".claude", "MEMORY", "WORK"));
 
-const prd = ({ fm = {}, criteria = [], verification = "", outcome = "" } = {}) => {
+// criteria: [status, id, text?]; status — true (x), false (пробел) или "DEFERRED-VERIFY".
+const prd = ({ fm = {}, criteria = [], verification = "", outcome = "", askCheck = "- ✓ «Тестовая задача» → сделано" } = {}) => {
+	const live = criteria.filter(([, , text]) => !text?.startsWith("[DROPPED"));
 	const front = {
-		algorithm: '"4.0"',
+		algorithm: '"4.1-omp"',
 		task: "Тестовая задача",
+		stated_goal: '"сделай тестовую задачу"',
 		slug: "20260924-120000_test",
 		effort: "standard",
 		phase: "execute",
-		progress: `${criteria.filter(([done]) => done).length}/${criteria.length}`,
+		progress: `${live.filter(([status]) => status === true).length}/${live.length}`,
 		started: "2026-09-24T12:00:00Z",
 		updated: "2026-09-24T12:00:00Z",
 		...fm,
 	};
 	const lines = ["---", ...Object.entries(front).filter(([, v]) => v !== undefined).map(([k, v]) => `${k}: ${v}`), "---", "", "## Criteria"];
-	for (const [done, id] of criteria) lines.push(`- [${done ? "x" : " "}] ${id}: критерий`);
+	for (const [status, id, text = "критерий"] of criteria) {
+		const mark = status === true ? "x" : status === false ? " " : status;
+		lines.push(`- [${mark}] ${id}: ${text}`);
+	}
 	if (verification) lines.push("", "## Verification", verification);
+	if (askCheck) lines.push("", "## Ask Check", askCheck);
 	if (outcome) lines.push("", "## Outcome", outcome);
 	return `${lines.join("\n")}\n`;
 };
+const complete = (extra = {}) => prd({ ...extra, fm: { phase: "complete", ...extra.fm } });
 
 try {
 	// Legacy v3.7 PRD никогда не блокируется.
 	assert.deepEqual(validatePrd("---\ntask: x\nphase: complete\nprogress: 3/18\n---\n- [ ] ISC-1: a\n"), []);
 
+	// Цель пользователя обязательна дословно.
+	assert.ok(validatePrd(prd({ fm: { stated_goal: undefined } })).some((e) => e.includes("stated_goal")));
+
 	// complete при частичных критериях — ошибка (дефект v3.7: 3/18, 5/21).
-	const partialComplete = validatePrd(prd({ fm: { phase: "complete" }, criteria: [[true, "ISC-1"], [false, "ISC-2"]], verification: "ISC-1: ok" }));
+	const partialComplete = validatePrd(complete({ criteria: [[true, "ISC-1"], [false, "ISC-2"]], verification: "ISC-1: ok" }));
 	assert.ok(partialComplete.some((e) => e.includes("complete при 1/2")), partialComplete.join("|"));
 
 	// progress должен совпадать с чекбоксами.
@@ -42,19 +53,42 @@ try {
 	assert.ok(drift.some((e) => e.includes("не совпадает")), drift.join("|"));
 
 	// Каждый отмеченный критерий требует доказательства; ISC-1 не засчитывается упоминанием ISC-10.
-	const noEvidence = validatePrd(prd({
-		fm: { phase: "complete" },
-		criteria: [[true, "ISC-1"], [true, "ISC-10"]],
-		verification: "ISC-10: `bun test` → 12 pass",
-	}));
-	assert.deepEqual(noEvidence, ["нет доказательства в ## Verification для: ISC-1"]);
+	assert.deepEqual(
+		validatePrd(complete({ criteria: [[true, "ISC-1"], [true, "ISC-10"]], verification: "ISC-10: `bun test` → 12 pass" })),
+		["нет доказательства в ## Verification для: ISC-1"],
+	);
+	// Дочерний ISC-3.1 — отдельный ID: его доказательство не закрывает ISC-3, а точка в конце фразы не ломает ID.
+	assert.deepEqual(
+		validatePrd(complete({ criteria: [[true, "ISC-3"], [true, "ISC-3.1"]], verification: "Проверено ISC-3.1: read → ok" })),
+		["нет доказательства в ## Verification для: ISC-3"],
+	);
+	assert.deepEqual(validatePrd(complete({ criteria: [[true, "ISC-3"]], verification: "curl -i → 200, закрывает ISC-3." })), []);
 
 	// Валидный standard complete проходит без verified_by.
-	const valid = prd({ fm: { phase: "complete" }, criteria: [[true, "ISC-1"], [true, "ISC-A1"]], verification: "ISC-1: файл есть\nISC-A1: прод не тронут" });
+	const valid = complete({ criteria: [[true, "ISC-1"], [true, "ISC-A1"]], verification: "ISC-1: файл есть\nISC-A1: прод не тронут" });
 	assert.deepEqual(validatePrd(valid), []);
 
+	// Ask Check: обязателен для complete, ✗ блокирует, строка без статуса — ошибка, SKIP с причиной допустим.
+	const base = { criteria: [[true, "ISC-1"]], verification: "ISC-1: ok" };
+	assert.ok(validatePrd(complete({ ...base, askCheck: "" })).some((e) => e.includes("требует ## Ask Check")));
+	assert.ok(validatePrd(complete({ ...base, askCheck: "- ✓ «a» → да\n- ✗ «b» — не сделано" })).some((e) => e.includes("(✗): 1")));
+	assert.ok(validatePrd(complete({ ...base, askCheck: "- «a» сделано" })).some((e) => e.includes("без статуса")));
+	assert.deepEqual(validatePrd(complete({ ...base, askCheck: "- ✓ «a» → да\n- SKIP «b» — вне границ, согласовано" })), []);
+
+	// ID не перенумеровывают: дубль — ошибка; tombstone остаётся в тексте, но выпадает из счёта.
+	assert.ok(validatePrd(prd({ criteria: [[false, "ISC-2"], [false, "ISC-2"]] })).some((e) => e.includes("повторяются: ISC-2")));
+	assert.deepEqual(validatePrd(complete({
+		criteria: [[true, "ISC-1"], [false, "ISC-2", "[DROPPED — см. Decisions]"]],
+		verification: "ISC-1: ok",
+	})), []);
+
+	// DEFERRED-VERIFY: допустим в complete только с follow-up; в progress не засчитывается.
+	const deferred = (verification) => complete({ fm: { progress: "1/2" }, criteria: [[true, "ISC-1"], ["DEFERRED-VERIFY", "ISC-2"]], verification });
+	assert.ok(validatePrd(deferred("ISC-1: ok\nISC-2: деплой недоступен")).some((e) => e.includes("follow-up")));
+	assert.deepEqual(validatePrd(deferred("ISC-1: ok\nISC-2: деплой недоступен, follow-up: OMP-42")), []);
+
 	// advanced complete: самоаттестация запрещена, проверяющий принимается.
-	const advanced = (verified_by) => prd({ fm: { phase: "complete", effort: "advanced", verified_by }, criteria: [[true, "ISC-1"]], verification: "ISC-1: ok" });
+	const advanced = (verified_by) => complete({ fm: { effort: "advanced", verified_by }, ...base });
 	assert.ok(validatePrd(advanced(undefined)).some((e) => e.includes("verified_by")));
 	assert.ok(validatePrd(advanced("self")).some((e) => e.includes("verified_by")));
 	assert.deepEqual(validatePrd(advanced("reviewer:PrdReviewer")), []);

@@ -1,18 +1,22 @@
 /**
- * Algorithm v4.0 guard — deterministic checks the Algorithm prompt cannot enforce.
+ * Algorithm 4.1-omp guard — deterministic checks the Algorithm prompt cannot enforce.
  *
  * The method itself lives in `skill://algorithm`; this module only enforces the
  * invariants a model is known to break on its own:
  *
- *   - a PRD cannot claim `complete` while criteria are unchecked or lack
- *     evidence in `## Verification` (v3.7 runs closed at 3/18 and 5/21);
+ *   - the user's goal is recorded verbatim (`stated_goal`) and, before
+ *     `complete`, every explicit ask is accounted for in `## Ask Check` with no ✗;
+ *   - a PRD cannot claim `complete` while criteria are open or lack evidence in
+ *     `## Verification` (v3.7 runs closed at 3/18 and 5/21);
+ *   - `[DEFERRED-VERIFY]` criteria carry a `follow-up:` reference;
+ *   - criterion IDs are unique (splits become ISC-N.M, drops stay as tombstones);
  *   - `progress` must match the checkboxes;
  *   - advanced/deep runs cannot self-attest completion (`verified_by`);
  *   - non-complete terminal phases must explain themselves in `## Outcome`;
  *   - the Advisor role stays review-only and never enters Algorithm.
  *
- * Only PRDs whose frontmatter carries `algorithm: "4.0"` are checked, so legacy
- * v3.7 PRDs (still written by Claude Code) are never blocked.
+ * Only PRDs whose frontmatter carries `algorithm: "4.1-omp"` are checked, so
+ * legacy v3.7 PRDs (still written by Claude Code) are never blocked.
  *
  * Self-contained on purpose: no imports from other working trees.
  */
@@ -29,7 +33,12 @@ const TERMINAL: Record<string, true> = { complete: true, partial: true, blocked:
 const PHASES: Record<string, true> = { observe: true, plan: true, execute: true, verify: true, ...TERMINAL };
 const EFFORTS: Record<string, true> = { standard: true, advanced: true, deep: true };
 const ATTESTED_EFFORTS: Record<string, true> = { advanced: true, deep: true };
-const REQUIRED_FIELDS = ["task", "slug", "effort", "phase", "progress", "started", "updated"];
+export const ALGORITHM_VERSION = "4.1-omp";
+const REQUIRED_FIELDS = ["task", "stated_goal", "slug", "effort", "phase", "progress", "started", "updated"];
+
+/** `- [ ] ISC-3.1: …`, `- [x] ISC-A1: …`, `- [DEFERRED-VERIFY] ISC-7: …`; group 3 is the criterion text. */
+const CRITERION = /^\s*-\s*\[( |x|X|DEFERRED-VERIFY)\]\s*(ISC-A?\d+(?:\.\d+)*)(?!\w|\.\d)\s*:?\s*(.*)$/gm;
+const ISC_ID = /\bISC-A?\d+(?:\.\d+)*(?!\w|\.\d)/g;
 const SELF_ATTESTATION = /^(self|author|me|main|primary|agent)$/i;
 const STALE_MS = 24 * 60 * 60 * 1000;
 
@@ -59,10 +68,10 @@ function section(text: string, title: string): string | null {
 	return (end === -1 ? rest : rest.slice(0, end)).join("\n");
 }
 
-/** Violations of the Algorithm v4.0 PRD contract; empty when valid or not a v4.0 PRD. */
+/** Violations of the Algorithm 4.1-omp PRD contract; empty when valid or not a 4.1-omp PRD. */
 export function validatePrd(text: string): string[] {
 	const fm = parseFrontmatter(text);
-	if (fm?.algorithm !== "4.0") return [];
+	if (fm?.algorithm !== ALGORITHM_VERSION) return [];
 	const errors: string[] = [];
 
 	for (const field of REQUIRED_FIELDS) {
@@ -73,9 +82,16 @@ export function validatePrd(text: string): string[] {
 	if (phase && PHASES[phase] !== true) errors.push(`frontmatter: неизвестная phase \`${phase}\``);
 	if (effort && EFFORTS[effort] !== true) errors.push(`frontmatter: неизвестный effort \`${effort}\``);
 
-	const criteria = [...text.matchAll(/^\s*-\s*\[([ xX])\]\s*(ISC-A?\d+)\b/gm)];
-	const total = criteria.length;
-	const checkedIds = criteria.filter((c) => c[1] !== " ").map((c) => c[2]);
+	// Tombstones (`- [ ] ISC-4: [DROPPED — …]`) keep their ID but leave the count.
+	const criteria = [...text.matchAll(CRITERION)];
+	const seen = new Set<string>();
+	const duplicates = new Set<string>();
+	for (const c of criteria) (seen.has(c[2]) ? duplicates : seen).add(c[2]);
+	if (duplicates.size > 0) errors.push(`ID критериев повторяются: ${[...duplicates].join(", ")} — ID не перенумеровывают, разбиение даёт ISC-N.M`);
+	const live = criteria.filter((c) => !c[3].startsWith("[DROPPED"));
+	const total = live.length;
+	const checkedIds = live.filter((c) => c[1] === "x" || c[1] === "X").map((c) => c[2]);
+	const deferredIds = live.filter((c) => c[1] === "DEFERRED-VERIFY").map((c) => c[2]);
 	const checked = checkedIds.length;
 
 	const progress = /^(\d+)\/(\d+)$/.exec(fm.progress ?? "");
@@ -87,11 +103,29 @@ export function validatePrd(text: string): string[] {
 
 	if (phase === "complete") {
 		if (total === 0) errors.push("complete без единого критерия");
-		if (checked !== total) errors.push(`complete при ${checked}/${total}: закрой критерии или выбери partial/blocked/abandoned`);
-		const verification = section(text, "Verification") ?? "";
-		const evidenced = new Set(verification.match(/\bISC-A?\d+\b/g) ?? []);
-		const missing = checkedIds.filter((id) => !evidenced.has(id));
+		if (checked + deferredIds.length !== total) {
+			errors.push(`complete при ${checked}/${total}: закрой критерии или выбери partial/blocked/abandoned`);
+		}
+
+		const verificationLines = (section(text, "Verification") ?? "").split(/\r?\n/);
+		const evidenced = new Set(verificationLines.flatMap((line) => line.match(ISC_ID) ?? []));
+		const missing = [...checkedIds, ...deferredIds].filter((id) => !evidenced.has(id));
 		if (missing.length > 0) errors.push(`нет доказательства в ## Verification для: ${missing.join(", ")}`);
+		const noFollowUp = deferredIds.filter((id) => !verificationLines.some(
+			(line) => (line.match(ISC_ID) ?? []).includes(id) && /follow-up:\s*\S/i.test(line),
+		));
+		if (noFollowUp.length > 0) errors.push(`DEFERRED-VERIFY без \`follow-up:\` в ## Verification: ${noFollowUp.join(", ")}`);
+
+		const asks = (section(text, "Ask Check") ?? "").split(/\r?\n/).filter((line) => /^\s*-\s/.test(line));
+		if (asks.length === 0) {
+			errors.push("complete требует ## Ask Check: каждая просьба пользователя со статусом ✓ / ✗ / SKIP");
+		} else {
+			const failed = asks.filter((line) => line.includes("✗"));
+			if (failed.length > 0) errors.push(`## Ask Check содержит невыполненные просьбы (✗): ${failed.length}`);
+			const unmarked = asks.filter((line) => !/^\s*-\s*(✓|✗|SKIP\b)/.test(line));
+			if (unmarked.length > 0) errors.push(`## Ask Check: строк без статуса ✓ / ✗ / SKIP: ${unmarked.length}`);
+		}
+
 		if (ATTESTED_EFFORTS[effort] === true) {
 			const verifiedBy = fm.verified_by ?? "";
 			if (!verifiedBy || SELF_ATTESTATION.test(verifiedBy)) {
@@ -159,7 +193,7 @@ export function runDoctor(workRoot = WORK_ROOT, now = Date.now()): DoctorReport 
 		const text = readFileSync(prdPath, "utf8");
 		const fm = parseFrontmatter(text) ?? {};
 		const terminal = TERMINAL[fm.phase ?? ""] === true;
-		if (fm.algorithm !== "4.0") {
+		if (fm.algorithm !== ALGORITHM_VERSION) {
 			if (!terminal) report.legacyOpen += 1;
 			continue;
 		}
@@ -172,8 +206,8 @@ export function runDoctor(workRoot = WORK_ROOT, now = Date.now()): DoctorReport 
 export function formatDoctor(report: DoctorReport): { message: string; level: "info" | "warning" | "error" } {
 	const parts = [
 		`skill: ${report.skillPresent ? "ok" : "НЕТ"}`,
-		`невалидные v4.0: ${report.invalid.length}`,
-		`зависшие v4.0 (>24ч): ${report.stale.length}`,
+		`невалидные ${ALGORITHM_VERSION}: ${report.invalid.length}`,
+		`зависшие ${ALGORITHM_VERSION} (>24ч): ${report.stale.length}`,
 		`посторонние в WORK: ${report.foreign.length}`,
 		`незакрытые legacy: ${report.legacyOpen}`,
 	];
@@ -192,7 +226,7 @@ export function formatDoctor(report: DoctorReport): { message: string; level: "i
 
 // --- Extension ---------------------------------------------------------------------
 
-const GUARD_PREFIX = "algorithm-guard: PRD нарушает контракт Algorithm v4.0 (skill://algorithm):\n- ";
+const GUARD_PREFIX = `algorithm-guard: PRD нарушает контракт Algorithm ${ALGORITHM_VERSION} (skill://algorithm):\n- `;
 
 export default function algorithmGuard(pi: ExtensionAPI): void {
 	let isAdvisorTurn = false;
@@ -237,7 +271,7 @@ export default function algorithmGuard(pi: ExtensionAPI): void {
 	});
 
 	pi.registerCommand("algorithm-doctor", {
-		description: "Проверить Algorithm v4.0: skill, незакрытые и невалидные PRD, мусор в MEMORY/WORK",
+		description: "Проверить Algorithm 4.1-omp: skill, незакрытые и невалидные PRD, мусор в MEMORY/WORK",
 		handler: async (_args, context) => {
 			const { message, level } = formatDoctor(runDoctor());
 			context.ui.notify(message, level);
