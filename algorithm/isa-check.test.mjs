@@ -149,6 +149,68 @@ try {
 	const cliOk = spawnSync("bun", [script, join(root, "ISA.md"), "--only", "Прод", "--env", "prod"], { encoding: "utf8" });
 	assert.equal(cliOk.status, 0, cliOk.stdout + cliOk.stderr);
 
+	// --- Кеш по inputs: повторный прогон без изменений не запускает тяжёлую проверку ---
+	const cacheRoot = join(root, "cache-proj");
+	execFileSync("mkdir", ["-p", join(cacheRoot, "src")]);
+	execFileSync("git", ["init", "-q"], { cwd: cacheRoot });
+	writeFileSync(join(cacheRoot, ".gitignore"), "*.log\n");
+	writeFileSync(join(cacheRoot, "src", "a.txt"), "v1\n");
+	const counter = join(root, "runs.count");
+	writeFileSync(counter, "");
+	writeFileSync(join(cacheRoot, "ISA.md"), `## Heavy
+- [x] ISC-1: Исходники содержат маркер версии
+  probe: echo run >> "${counter}"; grep -q '^v' src/a.txt
+  inputs: src
+- [ ] ISC-2: Кешированный провал сохраняет вывод
+  probe: echo "boom-${"$"}{RANDOM}" >&2; echo run >> "${counter}"; exit 4
+  inputs: src/a.txt
+`);
+	const runs = () => readFileSync(counter, "utf8").split("\n").filter(Boolean).length;
+	const cacheIsa = join(cacheRoot, "ISA.md");
+
+	const c1 = await checkIsa(cacheIsa);
+	assert.equal(runs(), 2);
+	assert.deepEqual(c1.report.results.map((r) => [r.outcome, r.cached]), [["pass", false], ["fail", false]]);
+
+	const c2 = await checkIsa(cacheIsa);
+	assert.equal(runs(), 2, "без изменений inputs проверки не запускаются");
+	assert.deepEqual(c2.report.results.map((r) => [r.outcome, r.cached]), [["pass", true], ["fail", true]]);
+	assert.equal(c2.report.results[1].exitCode, 4);
+	assert.match(c2.report.results[1].detail, /из кеша[\s\S]*boom-/);
+	assert.match(formatReport(c2.report, c2.reportPath), /из кеша 2/);
+
+	// Игнорируемый git файл не сбрасывает кеш; новый неотслеживаемый файл в inputs — сбрасывает только ISC-1.
+	writeFileSync(join(cacheRoot, "src", "debug.log"), "noise");
+	await checkIsa(cacheIsa);
+	assert.equal(runs(), 2);
+	writeFileSync(join(cacheRoot, "src", "b.txt"), "new");
+	const c3 = await checkIsa(cacheIsa);
+	assert.equal(runs(), 3);
+	assert.deepEqual(c3.report.results.map((r) => r.cached), [false, true]);
+
+	// Изменение содержимого перезапускает; результат следует за кодом.
+	writeFileSync(join(cacheRoot, "src", "a.txt"), "broken\n");
+	const c4 = await checkIsa(cacheIsa);
+	assert.equal(runs(), 5);
+	assert.equal(c4.report.results[0].outcome, "fail");
+
+	// cache: false (--no-cache) запускает всё.
+	await checkIsa(cacheIsa, { cache: false });
+	assert.equal(runs(), 7);
+
+	// Смена самой проверки сбрасывает кеш, даже если inputs те же.
+	writeFileSync(cacheIsa, readFileSync(cacheIsa, "utf8").replace("grep -q '^v' src/a.txt", "grep -q '^b' src/a.txt"));
+	const c5 = await checkIsa(cacheIsa);
+	assert.equal(runs(), 8);
+	assert.equal(c5.report.results[0].outcome, "pass");
+
+	// Таймаут не кешируется; inputs у manual — ошибка формата.
+	writeFileSync(join(cacheRoot, "SLOW.md"), `## S\n- [ ] ISC-1: Зависает\n  probe: echo run >> "${counter}"; sleep 5\n  timeout: 1\n  inputs: src\n`);
+	await checkIsa(join(cacheRoot, "SLOW.md"));
+	await checkIsa(join(cacheRoot, "SLOW.md"));
+	assert.equal(runs(), 10);
+	assert.match(parseIsa("## M\n- [ ] ISC-1: Вкус\n  probe: manual\n  inputs: src\n").errors.join("|"), /inputs не применим к manual/);
+
 	console.log("isa-check: all checks passed");
 } finally {
 	rmSync(root, { recursive: true, force: true });

@@ -5,7 +5,10 @@
  * expectation, and this script only executes and compares.
  *
  *   bun isa-check.ts [ISA.md] [--env test|prod|all] [--only ISC-1,ISC-2|Раздел]
- *                    [--baseline <report.json>] [--jobs N] [--json] [--verbose]
+ *                    [--baseline <report.json>] [--jobs N] [--no-cache] [--json] [--verbose]
+ *
+ * A claim with `inputs:` (git pathspecs) is cached: while the content of every file its
+ * pathspecs match is unchanged, the previous result is reused from `.isa/cache.json`.
  *
  * The ISA file is never modified. Each run writes `.isa/runs/<stamp>.json` next
  * to ISA.md and `.isa/last.json`; `.isa/` ignores itself, so project git stays clean.
@@ -13,9 +16,10 @@
  * Exit codes: 0 — no failures; 1 — a probe failed or regressed; 2 — format or usage error.
  * Format reference: `ISA-FORMAT.md` next to this file.
  */
-import { spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
+import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 
 export type ClaimStatus = "open" | "done" | "deferred";
 export type Expect = { kind: "exit0" } | { kind: "fail"; pattern: RegExp | null } | { kind: "stdout"; pattern: RegExp };
@@ -31,6 +35,8 @@ export type Claim = {
 	expectRaw: string;
 	env: string;
 	timeoutSec: number;
+	/** Git pathspecs whose content fully determines the probe result; empty — no caching. */
+	inputs: string[];
 	dropped: boolean;
 };
 
@@ -45,6 +51,8 @@ export type ClaimResult = {
 	exitCode: number | null;
 	timedOut: boolean;
 	durationMs: number;
+	/** Result reused from `.isa/cache.json`: inputs unchanged since that run. */
+	cached: boolean;
 	detail: string;
 };
 
@@ -69,7 +77,7 @@ export type Report = {
 const DEFAULT_TIMEOUT_SEC = 60;
 const DETAIL_CHARS = 600;
 const CRITERION = /^\s*-\s*\[( |x|X|DEFERRED-VERIFY)\]\s*(ISC-A?\d+(?:\.\d+)*)(?!\w|\.\d)\s*:?\s*(.*)$/;
-const FIELD = /^\s+(probe|expect|env|timeout):\s*(.*)$/;
+const FIELD = /^\s+(probe|expect|env|timeout|inputs):\s*(.*)$/;
 
 function parseRegex(raw: string): RegExp | null {
 	const m = /^\/(.*)\/([a-z]*)$/.exec(raw.trim());
@@ -121,6 +129,7 @@ export function parseIsa(text: string): { project: string; claims: Claim[]; erro
 				expectRaw: "",
 				env: "test",
 				timeoutSec: DEFAULT_TIMEOUT_SEC,
+				inputs: [],
 				dropped: criterion[3].startsWith("[DROPPED"),
 			};
 			claims.push(current);
@@ -136,6 +145,7 @@ export function parseIsa(text: string): { project: string; claims: Claim[]; erro
 		if (field[1] === "expect") current.expectRaw = value;
 		if (field[1] === "env") current.env = value;
 		if (field[1] === "timeout") current.timeoutSec = Number(value);
+		if (field[1] === "inputs") current.inputs = value.split(/\s+/).filter(Boolean);
 	});
 
 	const seen = new Set<string>();
@@ -150,7 +160,10 @@ export function parseIsa(text: string): { project: string; claims: Claim[]; erro
 		}
 		if (claim.env !== "test" && claim.env !== "prod") errors.push(`${where}: env должен быть test или prod`);
 		if (!Number.isFinite(claim.timeoutSec) || claim.timeoutSec <= 0) errors.push(`${where}: timeout — положительное число секунд`);
-		if (claim.probe === "manual") continue;
+		if (claim.probe === "manual") {
+			if (claim.inputs.length) errors.push(`${where}: inputs не применим к manual`);
+			continue;
+		}
 		claim.expect = parseExpect(claim.expectRaw || "exit 0");
 		if (!claim.expect) errors.push(`${where}: expect «${claim.expectRaw}» — ожидается exit 0 | fail | fail /re/ | stdout /re/`);
 	}
@@ -210,11 +223,45 @@ function judge(expect: Expect, run: ProbeRun): { pass: boolean; why: string } {
 	return { pass: matched, why: run.exitCode !== 0 ? `exit ${run.exitCode}` : matched ? "stdout совпал" : `stdout не совпал с ${expect.pattern}` };
 }
 
+type CacheEntry = { key: string; outcome: "pass" | "fail"; exitCode: number | null; detail: string; durationMs: number; at: string };
+type Cache = { version: 1; entries: Record<string, CacheEntry> };
+
+/**
+ * Content hash of every file the pathspecs match — tracked and untracked, ignored files
+ * excluded — as they are on disk now. Null outside a git work tree.
+ */
+export function inputsFingerprint(root: string, pathspecs: string[]): string | null {
+	let listing: string;
+	try {
+		listing = execFileSync("git", ["ls-files", "-co", "--exclude-standard", "-z", "--", ...pathspecs], { cwd: root, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+	} catch {
+		return null;
+	}
+	const hash = createHash("sha256");
+	for (const file of [...new Set(listing.split("\0").filter(Boolean))].sort()) {
+		const path = join(root, file);
+		hash.update(`${file}\0`);
+		hash.update(existsSync(path) ? readFileSync(path) : "\0deleted\0");
+		hash.update("\0");
+	}
+	return hash.digest("hex");
+}
+
+function readCache(path: string): Cache {
+	try {
+		const cache = JSON.parse(readFileSync(path, "utf8")) as Cache;
+		if (cache.version === 1 && cache.entries) return cache;
+	} catch {}
+	return { version: 1, entries: {} };
+}
+
 export type CheckOptions = {
 	env?: "test" | "prod" | "all";
 	only?: string[];
 	baseline?: string | null;
 	jobs?: number;
+	/** Reuse results of claims with unchanged `inputs:`; default true. */
+	cache?: boolean;
 	now?: Date;
 };
 
@@ -242,8 +289,12 @@ export async function checkIsa(isaPath: string, options: CheckOptions = {}): Pro
 	};
 	const selected = claims.filter((c) => !c.dropped && (only.length === 0 || only.includes(c.id) || only.includes(c.section)));
 	const results: ClaimResult[] = selected.map((c) => ({
-		id: c.id, text: c.text, section: c.section, marked: c.status, outcome: "skipped", exitCode: null, timedOut: false, durationMs: 0, detail: "",
+		id: c.id, text: c.text, section: c.section, marked: c.status, outcome: "skipped", exitCode: null, timedOut: false, durationMs: 0, cached: false, detail: "",
 	}));
+	const cachePath = join(root, ".isa", "cache.json");
+	const cache = readCache(cachePath);
+	const useCache = options.cache ?? true;
+	const fresh: Record<string, CacheEntry> = {};
 
 	const queue = selected.map((claim, index) => ({ claim, index }));
 	const worker = async () => {
@@ -258,6 +309,17 @@ export async function checkIsa(isaPath: string, options: CheckOptions = {}): Pro
 				result.detail = `env ${claim.env}`;
 				continue;
 			}
+			const fingerprint = claim.inputs.length ? inputsFingerprint(root, claim.inputs) : null;
+			const key = fingerprint
+				? createHash("sha256").update(JSON.stringify([claim.probe, claim.expectRaw, claim.env, claim.inputs, fingerprint])).digest("hex")
+				: null;
+			const entryId = `${basename(isa)}#${claim.id}`;
+			const hit = key && useCache ? cache.entries[entryId] : undefined;
+			if (hit && hit.key === key) {
+				Object.assign(result, { outcome: hit.outcome, exitCode: hit.exitCode, durationMs: 0, cached: true });
+				result.detail = `из кеша: inputs не менялись с ${hit.at}${hit.outcome === "fail" ? `\n${hit.detail}` : ""}`;
+				continue;
+			}
 			const run = await runProbe(claim.probe, root, probeEnv, claim.timeoutSec);
 			const verdict = judge(claim.expect as Expect, run);
 			result.outcome = verdict.pass ? "pass" : "fail";
@@ -267,6 +329,10 @@ export async function checkIsa(isaPath: string, options: CheckOptions = {}): Pro
 			result.detail = verdict.pass
 				? verdict.why
 				: `${verdict.why}\n${`${run.stdout}\n${run.stderr}`.trim().slice(-DETAIL_CHARS)}`.trim();
+			// A timeout says nothing about the inputs, so it is never cached.
+			if (key && !run.timedOut) {
+				fresh[entryId] = { key, outcome: result.outcome, exitCode: run.exitCode, detail: result.detail, durationMs: run.durationMs, at: startedAt };
+			}
 		}
 	};
 	await Promise.all(Array.from({ length: Math.max(1, options.jobs ?? 4) }, worker));
@@ -293,12 +359,19 @@ export async function checkIsa(isaPath: string, options: CheckOptions = {}): Pro
 	const json = `${JSON.stringify(report, null, 2)}\n`;
 	writeFileSync(reportPath, json);
 	writeFileSync(join(root, ".isa", "last.json"), json);
+	if (Object.keys(fresh).length > 0) {
+		// Re-read so a concurrent run's entries survive; this run wins only for claims it executed.
+		const latest = readCache(cachePath);
+		Object.assign(latest.entries, fresh);
+		writeFileSync(cachePath, `${JSON.stringify(latest, null, 2)}\n`);
+	}
 	return { report, errors, reportPath };
 }
 
 export function formatReport(report: Report, reportPath: string | null, verbose = false): string {
 	const s = report.summary;
-	const lines = [`ISA ${report.project || report.isa}: ${s.pass} pass · ${s.fail} fail · ${s.manual} manual · ${s.skipped} skipped (env ${report.env})`];
+	const cached = report.results.filter((r) => r.cached).length;
+	const lines = [`ISA ${report.project || report.isa}: ${s.pass} pass · ${s.fail} fail · ${s.manual} manual · ${s.skipped} skipped (env ${report.env}${cached ? `, из кеша ${cached}` : ""})`];
 	if (report.baseline) {
 		lines.push(report.regressions.length ? `РЕГРЕССИИ относительно baseline: ${report.regressions.join(", ")}` : "Регрессий относительно baseline нет");
 		if (report.notRechecked.length) lines.push(`Проходили в baseline, но не перепроверены: ${report.notRechecked.join(", ")}`);
@@ -306,7 +379,7 @@ export function formatReport(report: Report, reportPath: string | null, verbose 
 	if (report.drift.length) lines.push(`Отмечены [x], но не проходят: ${report.drift.join(", ")}`);
 	for (const r of report.results) {
 		if (r.outcome === "fail") lines.push(`✗ ${r.id} [${r.section}] ${r.text}\n    ${r.detail.replace(/\n/g, "\n    ")}`);
-		else if (verbose && r.outcome === "pass") lines.push(`✓ ${r.id} ${r.text} (${r.durationMs} мс)`);
+		else if (verbose && r.outcome === "pass") lines.push(`✓ ${r.id} ${r.text} (${r.cached ? "из кеша" : `${r.durationMs} мс`})`);
 	}
 	const manual = report.results.filter((r) => r.outcome === "manual").map((r) => r.id);
 	if (manual.length) lines.push(`Ручная проверка: ${manual.join(", ")}`);
@@ -334,6 +407,7 @@ if (import.meta.main) {
 	const jobs = Number(flag("--jobs") ?? 4);
 	const asJson = bool("--json");
 	const verbose = bool("--verbose");
+	const noCache = bool("--no-cache");
 	const isa = resolve(args[0] ?? "ISA.md");
 	if (env !== "test" && env !== "prod" && env !== "all") {
 		console.error("--env: test | prod | all");
@@ -348,6 +422,7 @@ if (import.meta.main) {
 		only: only ? only.split(",").map((s) => s.trim()).filter(Boolean) : [],
 		baseline,
 		jobs,
+		cache: !noCache,
 	});
 	if (errors.length > 0) {
 		console.error(`Ошибки формата или аргументов ${isa}:\n- ${errors.join("\n- ")}`);
