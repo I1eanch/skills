@@ -1,13 +1,14 @@
 // Запуск: bun ~/.omp/agent/skills/algorithm/extension/algorithm-guard.test.mjs
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 const home = mkdtempSync(join(tmpdir(), "algorithm-guard-"));
 process.env.HOME = home;
 const guard = await import("./algorithm-guard.ts");
-const { validatePrd, runDoctor, formatDoctor, WORK_ROOT } = guard;
+const { validatePrd, runDoctor, formatDoctor, findIsa, WORK_ROOT, ISA_CHECK_SCRIPT } = guard;
 assert.equal(WORK_ROOT, join(home, ".claude", "MEMORY", "WORK"));
 
 // criteria: [status, id, text?]; status — true (x), false (пробел) или "DEFERRED-VERIFY".
@@ -97,6 +98,38 @@ try {
 	assert.ok(validatePrd(prd({ fm: { phase: "blocked" }, criteria: [[false, "ISC-1"]] })).some((e) => e.includes("## Outcome")));
 	assert.deepEqual(validatePrd(prd({ fm: { phase: "blocked" }, criteria: [[false, "ISC-1"]], outcome: "Нужен доступ к PROD." })), []);
 
+	// --- ISA проекта: complete требует отчёты isa-check без регрессий ---
+	const { checkIsa } = await import("../isa-check.ts");
+	const proj = join(home, "proj");
+	mkdirSync(join(proj, "src"), { recursive: true });
+	execFileSync("git", ["init", "-q"], { cwd: proj });
+	const isaPath = join(proj, "ISA.md");
+	writeFileSync(isaPath, "---\nproject: proj\n---\n## Core checks\n- [x] ISC-1: Флаг сборки существует\n  probe: test -f flag\n");
+	writeFileSync(join(proj, "flag"), "");
+	const baseRun = await checkIsa(isaPath, { now: new Date("2026-09-24T10:00:00Z") });
+	rmSync(join(proj, "flag"));
+	const brokenRun = await checkIsa(isaPath, { baseline: baseRun.reportPath, now: new Date("2026-09-24T11:00:00Z") });
+	writeFileSync(join(proj, "flag"), "");
+	const fixedRun = await checkIsa(isaPath, { baseline: baseRun.reportPath, now: new Date("2026-09-24T12:00:00Z") });
+	const noBaselineRun = await checkIsa(isaPath, { now: new Date("2026-09-24T13:00:00Z") });
+	const narrowedRun = await checkIsa(isaPath, { baseline: baseRun.reportPath, only: ["ISC-1"], now: new Date("2026-09-24T14:00:00Z") });
+	const withIsa = (fm) => complete({ ...base, fm: { isa: isaPath, isa_baseline: baseRun.reportPath, ...fm } });
+
+	assert.ok(validatePrd(withIsa({ isa_final: undefined })).some((e) => e.includes("нет `isa_final`")));
+	assert.ok(validatePrd(withIsa({ isa_final: brokenRun.reportPath })).some((e) => e.includes("регрессии относительно baseline: ISC-1")));
+	assert.ok(validatePrd(withIsa({ isa_final: noBaselineRun.reportPath })).some((e) => e.includes("без --baseline")));
+	assert.ok(validatePrd(withIsa({ isa_final: baseRun.reportPath, isa_baseline: fixedRun.reportPath })).some((e) => e.includes("не позже")));
+	assert.ok(validatePrd(withIsa({ isa: "proj/ISA.md", isa_final: fixedRun.reportPath })).some((e) => e.includes("абсолютным")));
+	assert.ok(validatePrd(withIsa({ isa_final: narrowedRun.reportPath })).some((e) => e.includes("нужен прогон всего ISA")));
+	assert.deepEqual(validatePrd(withIsa({ isa_final: fixedRun.reportPath })), []);
+
+	// ISA ищется вверх от cwd до корня git.
+	assert.equal(findIsa(join(proj, "src")), isaPath);
+	const emptyRepo = join(home, "empty", "sub");
+	mkdirSync(emptyRepo, { recursive: true });
+	execFileSync("git", ["init", "-q"], { cwd: join(home, "empty") });
+	assert.equal(findIsa(emptyRepo), null);
+
 	// --- Хуки extension ---
 	const handlers = {};
 	const commands = {};
@@ -172,6 +205,21 @@ try {
 	await commands["algorithm-doctor"].handler("", { ui: { notify: (message, level) => { notified = { message, level }; } } });
 	assert.match(notified.message, /посторонние: env-dump\/, n8n-backup\.json/);
 	assert.ok(readFileSync(prdPath, "utf8").includes("phase: complete"));
+
+	// /isa-check: находит ISA от cwd, запускает раннер, уровень уведомления по коду выхода.
+	mkdirSync(join(ISA_CHECK_SCRIPT, ".."), { recursive: true });
+	symlinkSync(new URL("../isa-check.ts", import.meta.url).pathname, ISA_CHECK_SCRIPT);
+	const ui = (sink) => ({ notify: (message, level) => sink.push({ message, level }) });
+	const isaNotes = [];
+	await commands["isa-check"].handler('--verbose --only "Core checks"', { cwd: join(proj, "src"), ui: ui(isaNotes) });
+	assert.equal(isaNotes[0].level, "info", isaNotes[0].message);
+	assert.match(isaNotes[0].message, /ISA proj: 1 pass · 0 fail/);
+	rmSync(join(proj, "flag"));
+	await commands["isa-check"].handler("", { cwd: proj, ui: ui(isaNotes) });
+	assert.equal(isaNotes[1].level, "warning");
+	assert.match(isaNotes[1].message, /✗ ISC-1/);
+	await commands["isa-check"].handler("", { cwd: emptyRepo, ui: ui(isaNotes) });
+	assert.match(isaNotes[2].message, /ISA\.md не найден/);
 
 	console.log("algorithm-guard: all checks passed");
 } finally {

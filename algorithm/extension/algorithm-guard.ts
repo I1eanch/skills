@@ -22,7 +22,7 @@
  */
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { homedir } from "node:os";
-import { isAbsolute, join, resolve } from "node:path";
+import { dirname, isAbsolute, join, resolve } from "node:path";
 import type { ExtensionAPI } from "@oh-my-pi/pi-coding-agent";
 
 const HOME = process.env.HOME || homedir();
@@ -132,12 +132,69 @@ export function validatePrd(text: string): string[] {
 				errors.push(`effort ${effort}: complete требует verified_by от проверяющего (reviewer:<id> | loop_validate | user)`);
 			}
 		}
+
+		if (fm.isa) errors.push(...validateIsaReports(fm));
 	}
 
 	if (phase === "partial" || phase === "blocked" || phase === "abandoned") {
 		if (!(section(text, "Outcome") ?? "").trim()) errors.push(`phase ${phase} требует непустой раздел ## Outcome`);
 	}
 
+	return errors;
+}
+
+type IsaReport = {
+	isa?: string;
+	baseline?: string | null;
+	only?: string[];
+	startedAt?: string;
+	regressions?: string[];
+	notRechecked?: string[];
+};
+
+/**
+ * A run against a project ISA (`isa:` in frontmatter) closes only on full isa-check
+ * reports: a baseline before the work and a final run after it, compared to that
+ * baseline, where every baseline pass still passes.
+ */
+function validateIsaReports(fm: Record<string, string>): string[] {
+	const errors: string[] = [];
+	for (const field of ["isa", "isa_baseline", "isa_final"]) {
+		if (fm[field] && !isAbsolute(fm[field])) errors.push(`\`${field}\` должен быть абсолютным путём`);
+	}
+	if (errors.length > 0) return errors;
+	const isa = resolve(fm.isa);
+	const read = (field: "isa_baseline" | "isa_final"): IsaReport | null => {
+		const path = fm[field];
+		if (!path) {
+			errors.push(`isa: задан, но нет \`${field}\` — запусти isa-check (skill://algorithm, раздел «ISA проекта»)`);
+			return null;
+		}
+		if (!existsSync(path)) {
+			errors.push(`\`${field}\`: файл отчёта не найден: ${path}`);
+			return null;
+		}
+		try {
+			return JSON.parse(readFileSync(path, "utf8")) as IsaReport;
+		} catch {
+			errors.push(`\`${field}\`: отчёт не читается как JSON: ${path}`);
+			return null;
+		}
+	};
+	const baseline = read("isa_baseline");
+	const final = read("isa_final");
+	if (!baseline || !final) return errors;
+	if (baseline.isa !== isa || final.isa !== isa) errors.push(`отчёты isa-check сняты не с ${isa}`);
+	if (!final.baseline || resolve(final.baseline) !== resolve(fm.isa_baseline)) {
+		errors.push("isa_final снят без --baseline <isa_baseline>: регрессии не проверены");
+	}
+	if ((final.startedAt ?? "") <= (baseline.startedAt ?? "")) errors.push("isa_final снят не позже isa_baseline");
+	for (const [field, report] of [["isa_baseline", baseline], ["isa_final", final]] as const) {
+		if (report.only?.length) errors.push(`\`${field}\` снят с --only ${report.only.join(",")}: нужен прогон всего ISA`);
+	}
+	if (!Array.isArray(final.notRechecked)) errors.push("isa_final — отчёт старого формата без notRechecked: перезапусти isa-check");
+	if (final.regressions?.length) errors.push(`isa-check: регрессии относительно baseline: ${final.regressions.join(", ")}`);
+	if (final.notRechecked?.length) errors.push(`isa-check: проходили в baseline, но не перепроверены: ${final.notRechecked.join(", ")}`);
 	return errors;
 }
 
@@ -160,6 +217,18 @@ export function isRunPrdPath(path: string, cwd: string): boolean {
 export function editedPaths(patch: unknown): string[] {
 	if (typeof patch !== "string") return [];
 	return [...patch.matchAll(/^\[(.+?)#[0-9A-Fa-f]{4}\]\s*$/gm)].map((m) => m[1]);
+}
+
+// --- Project ISA ---------------------------------------------------------------------
+
+export const ISA_CHECK_SCRIPT = join(HOME, ".omp", "agent", "skills", "algorithm", "isa-check.ts");
+
+/** Nearest `ISA.md` from `cwd` upwards, stopping at the git root; null when the project has none. */
+export function findIsa(cwd: string): string | null {
+	for (let dir = resolve(cwd); ; dir = dirname(dir)) {
+		if (existsSync(join(dir, "ISA.md"))) return join(dir, "ISA.md");
+		if (existsSync(join(dir, ".git")) || dirname(dir) === dir) return null;
+	}
 }
 
 // --- Doctor ------------------------------------------------------------------------
@@ -275,6 +344,22 @@ export default function algorithmGuard(pi: ExtensionAPI): void {
 		handler: async (_args, context) => {
 			const { message, level } = formatDoctor(runDoctor());
 			context.ui.notify(message, level);
+		},
+	});
+
+	pi.registerCommand("isa-check", {
+		description: "Прогнать проверки ISA.md текущего проекта (аргументы как у isa-check.ts: --env, --only, --verbose)",
+		handler: async (args, context) => {
+			const isa = findIsa(context.cwd);
+			if (!isa) {
+				context.ui.notify(`ISA.md не найден от ${context.cwd} до корня git`, "warning");
+				return;
+			}
+			// Quoted values keep their spaces: --only "Сборка и качество".
+			const argv = [...args.matchAll(/"([^"]*)"|'([^']*)'|(\S+)/g)].map((m) => m[1] ?? m[2] ?? m[3]);
+			const proc = Bun.spawn(["bun", ISA_CHECK_SCRIPT, isa, ...argv], { stdout: "pipe", stderr: "pipe" });
+			const [stdout, stderr, code] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited]);
+			context.ui.notify(`${stdout}${stderr}`.trim(), code === 0 ? "info" : code === 1 ? "warning" : "error");
 		},
 	});
 }
