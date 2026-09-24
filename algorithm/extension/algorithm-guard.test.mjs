@@ -221,6 +221,113 @@ try {
 	await commands["isa-check"].handler("", { cwd: emptyRepo, ui: ui(isaNotes) });
 	assert.match(isaNotes[2].message, /ISA\.md не найден/);
 
+	// --- Nudge-слой ---
+	const { destructiveOp, hasActivePrd } = guard;
+	const bash = (command) => ["bash", { command }];
+	const destructive = [
+		bash(`psql "$DB" -c "DROP TABLE amocrm_loss_reasons"`),
+		bash(`psql "$DB" -c 'delete from tasks where id = 1'`),
+		bash("git push --force origin feature"),
+		bash("git push origin :old-branch"),
+		bash("git push -d origin feature"),
+		bash("gh repo delete I1eanch/x --yes"),
+		bash("gh api -X DELETE repos/I1eanch/x/hooks/1"),
+		bash("curl -s -X DELETE https://api.example.com/v1/items/1"),
+		bash("supabase db reset --linked"),
+		bash("kubectl delete pod web-1"),
+		["write", { path: "xd://mcp__n8n_archive_workflow", content: "{}" }],
+		["write", { path: "xd://mcp__lific_delete", content: "{}" }],
+	];
+	for (const [tool, input] of destructive) assert.ok(destructiveOp(tool, input), JSON.stringify(input));
+	const harmless = [
+		bash(`grep -rn "DROP TABLE" supabase/migrations`),
+		bash("git log --grep=delete --oneline"),
+		bash(`echo "DELETE FROM tasks"`),
+		bash("git push origin main"),
+		bash("git push --follow-tags origin main"),
+		bash("curl -s https://api.example.com/delete-requests"),
+		bash("npm run test -- --reporter=dot"),
+		["write", { path: "xd://mcp__n8n_search_workflows", content: "{}" }],
+		["read", { path: "/tmp/DROP TABLE.txt" }],
+	];
+	for (const [tool, input] of harmless) assert.equal(destructiveOp(tool, input), null, JSON.stringify(input));
+
+	// Экземпляр extension = сессия. Порог длинной сессии задаётся env до регистрации.
+	process.env.ALGORITHM_NUDGE_CALLS = "5";
+	process.env.ALGORITHM_NUDGE_FILES = "3";
+	const session = (systemPrompt = []) => {
+		const h = {};
+		guard.default({ on: (name, handler) => { h[name] = handler; }, registerCommand: () => {} });
+		h.before_agent_start({ prompt: "работаю", systemPrompt });
+		const call = async (toolName, input, isError = false) => {
+			const blocked = await h.tool_call({ toolName, toolCallId: "n", input }, ctx);
+			const result = await h.tool_result({ toolName, toolCallId: "n", input, isError, content: [{ type: "text", text: "ok" }] }, ctx);
+			return { blocked, result, nudge: result?.content?.at(-1)?.text ?? "" };
+		};
+		return { h, call };
+	};
+	assert.equal(hasActivePrd(), false);
+
+	// Разрушающая операция без активного PRD: подсказка, результат не ошибка, вызов не блокирован; повтор — тишина.
+	const s1 = session();
+	const drop = await s1.call(...bash(`psql "$DB" -c "DROP TABLE x"`));
+	assert.equal(drop.blocked, undefined);
+	assert.match(drop.nudge, /разрушающая операция — SQL DROP[\s\S]*authority[\s\S]*baseline/);
+	assert.equal(drop.result.isError, undefined);
+	assert.equal((await s1.call(...bash(`psql "$DB" -c "DROP TABLE y"`))).result, undefined);
+	assert.match((await s1.call(...bash("git push --force origin f"))).nudge, /git push с перезаписью/);
+	// Неуспешная команда ничего не разрушила — подсказки нет.
+	assert.equal((await session().call(...bash("gh repo delete x --yes"), true)).result, undefined);
+
+	// Длинная сессия: одна подсказка на пороге вызовов, дальше тишина.
+	const s2 = session();
+	const quiet = [];
+	for (let i = 0; i < 4; i += 1) quiet.push((await s2.call("read", { path: `/tmp/f${i}` })).result);
+	assert.deepEqual(quiet, [undefined, undefined, undefined, undefined]);
+	assert.match((await s2.call("read", { path: "/tmp/f5" })).nudge, /5 вызовов инструментов[\s\S]*PRD Algorithm не заведён/);
+	assert.equal((await s2.call("read", { path: "/tmp/f6" })).result, undefined);
+
+	// Порог по изменённым файлам.
+	const s3 = session();
+	for (const f of ["a", "b"]) assert.equal((await s3.call("write", { path: join(home, f), content: "x" })).result, undefined);
+	assert.match((await s3.call("edit", { input: `[${join(home, "c")}#A1B2]\nPUT 1.=1:\n+x\n` })).nudge, /3 изменённых файлов/);
+
+	// Запись PRD в сессии снимает подсказку длинной сессии.
+	const s4 = session();
+	await s4.call("write", { path: join(WORK_ROOT, "20260925-000000_nudge", "PRD.md"), content: "черновик" });
+	for (let i = 0; i < 6; i += 1) assert.equal((await s4.call("read", { path: `/tmp/g${i}` })).result, undefined);
+
+	// Активный PRD 4.1-omp на диске снимает обе подсказки.
+	const activeDir = join(WORK_ROOT, "20260925-000001_active");
+	mkdirSync(activeDir, { recursive: true });
+	writeFileSync(join(activeDir, "PRD.md"), prd({ criteria: [[false, "ISC-1"]] }));
+	assert.equal(hasActivePrd(), true);
+	const s5 = session();
+	assert.equal((await s5.call(...bash("kubectl delete pod web"))).result, undefined);
+	for (let i = 0; i < 6; i += 1) assert.equal((await s5.call("read", { path: `/tmp/h${i}` })).result, undefined);
+	rmSync(activeDir, { recursive: true });
+
+	// Субагент и Advisor подсказок не получают.
+	const sub = session(["base", "You are operating on a piece of work assigned to you by the main agent."]);
+	assert.equal((await sub.call(...bash("terraform destroy -auto-approve"))).result, undefined);
+	for (let i = 0; i < 6; i += 1) assert.equal((await sub.call("read", { path: `/tmp/s${i}` })).result, undefined);
+	const adv = session();
+	adv.h.before_agent_start({ prompt: "### Session update\n\n**agent**:\nидёт работа", systemPrompt: [] });
+	for (let i = 0; i < 6; i += 1) assert.equal((await adv.call("read", { path: `/tmp/v${i}` })).result, undefined);
+
+	// session_start сбрасывает счётчики и отметки: подсказка может прийти снова в новой сессии.
+	s2.h.session_start();
+	for (let i = 0; i < 4; i += 1) assert.equal((await s2.call("read", { path: `/tmp/r${i}` })).result, undefined);
+	assert.match((await s2.call("read", { path: "/tmp/r5" })).nudge, /5 вызовов инструментов/);
+
+	// Невалидная правка PRD на пороге длинной сессии: ошибка PRD остаётся ошибкой, а подсказки нет — PRD заведён.
+	const s6 = session();
+	for (let i = 0; i < 4; i += 1) await s6.call("read", { path: `/tmp/k${i}` });
+	const both = await s6.call("edit", { input: `[${prdPath}#A1B2]\nPUT 3.=3:\n+phase: complete\n` });
+	assert.equal(both.result.isError, true);
+	assert.match(both.nudge, /complete при 1\/2/);
+	assert.doesNotMatch(both.nudge, /подсказка/);
+
 	console.log("algorithm-guard: all checks passed");
 } finally {
 	rmSync(home, { recursive: true, force: true });

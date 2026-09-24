@@ -297,11 +297,82 @@ export function formatDoctor(report: DoctorReport): { message: string; level: "i
 
 const GUARD_PREFIX = `algorithm-guard: PRD нарушает контракт Algorithm ${ALGORITHM_VERSION} (skill://algorithm):\n- `;
 
+// --- Nudges ------------------------------------------------------------------------
+//
+// Deterministic reminders appended to a tool result. Each asks only about state the
+// model cannot see in its own context (what a destroyed resource owned, whether a run is
+// registered on disk), after LifeOS Algorithm v8.20.2 AlgorithmNudge. Nudges never block
+// and never turn a result into an error; subagents and the Advisor get none.
+
+const SUBAGENT_MARKER = "You are operating on a piece of work assigned to you by the main agent.";
+const ACTIVE_PRD_WINDOW_MS = 12 * 60 * 60 * 1000;
+const DB_CLIENT = /\b(psql|pgcli|sqlite3|mysql|supabase\s+db\s+(execute|query))\b/;
+const SQL_DESTRUCTIVE = /\b(DROP\s+(TABLE|SCHEMA|DATABASE|VIEW|MATERIALIZED\s+VIEW|FUNCTION|INDEX|TYPE|POLICY|TRIGGER|ROLE|EXTENSION)|TRUNCATE|DELETE\s+FROM|ALTER\s+TABLE\s+\S+\s+DROP)\b/i;
+/** Shell commands that destroy remote or shared state; `[^|;&]*` keeps a match inside one command. */
+const DESTRUCTIVE_COMMANDS: Array<[label: string, pattern: RegExp]> = [
+	["git push с перезаписью или удалением ветки", /\bgit\s+push\b[^|;&]*(\s--force(-with-lease)?\b|\s-f\b|\s--delete\b|\s-d\b|\s:[\w./-]+)/],
+	["удаление через gh", /\bgh\s+(repo|release|secret|variable|label|cache|run|workflow)\s+delete\b/],
+	["DELETE через gh api", /\bgh\s+api\b[^|;&]*(-X|--method)\s*['"]?DELETE\b/i],
+	["HTTP DELETE", /\bcurl\b[^|;&]*(-X|--request)\s*['"]?DELETE\b/i],
+	["удаление в Supabase", /\bsupabase\s+(db\s+reset|(projects|functions|branches)\s+delete|secrets\s+unset|storage\s+rm)\b/],
+	["удаление инфраструктуры", /\b(kubectl\s+delete|terraform\s+destroy|docker\s+(volume\s+rm|system\s+prune)|vercel\s+(rm|remove)\b|wrangler\s+[^|;&]*\bdelete\b|gcloud\s+[^|;&]*\bdelete\b|aws\s+[^|;&]*(\bdelete-|\bs3\s+rm\b))/],
+];
+const MCP_DESTRUCTIVE = /^xd:\/\/(mcp__[a-z0-9_]*?(delete|archive|drop|remove|unpublish|revoke|truncate)[a-z0-9_]*)/i;
+
+/** Label of a destructive operation performed by this tool call, or null. */
+export function destructiveOp(toolName: string, input: Record<string, unknown> | undefined): string | null {
+	if (toolName === "write") {
+		const path = typeof input?.path === "string" ? input.path : "";
+		const mcp = MCP_DESTRUCTIVE.exec(path);
+		return mcp ? `MCP ${mcp[1]}` : null;
+	}
+	if (toolName !== "bash") return null;
+	const command = typeof input?.command === "string" ? input.command : "";
+	if (DB_CLIENT.test(command) && SQL_DESTRUCTIVE.test(command)) return "SQL DROP / TRUNCATE / DELETE";
+	return DESTRUCTIVE_COMMANDS.find(([, pattern]) => pattern.test(command))?.[0] ?? null;
+}
+
+/** A 4.1-omp PRD in a non-terminal phase, written within the last 12 hours. */
+export function hasActivePrd(now = Date.now()): boolean {
+	if (!existsSync(WORK_ROOT)) return false;
+	return readdirSync(WORK_ROOT).some((name) => {
+		const prd = join(WORK_ROOT, name, "PRD.md");
+		if (!RUN_DIR.test(name) || !existsSync(prd) || now - statSync(prd).mtimeMs > ACTIVE_PRD_WINDOW_MS) return false;
+		const fm = parseFrontmatter(readFileSync(prd, "utf8")) ?? {};
+		return fm.algorithm === ALGORITHM_VERSION && TERMINAL[fm.phase ?? ""] !== true;
+	});
+}
+
+function positiveEnv(name: string, fallback: number): number {
+	const value = Number.parseInt(process.env[name] ?? "", 10);
+	return Number.isInteger(value) && value > 0 ? value : fallback;
+}
+
+const NUDGE_PREFIX = "algorithm-guard (подсказка):";
+
 export default function algorithmGuard(pi: ExtensionAPI): void {
 	let isAdvisorTurn = false;
+	let isSubagent = false;
+	// Session state for nudges; OMP runs one extension instance per session.
+	const nudgeCalls = positiveEnv("ALGORITHM_NUDGE_CALLS", 60);
+	const nudgeFiles = positiveEnv("ALGORITHM_NUDGE_FILES", 8);
+	let toolCalls = 0;
+	const editedFiles = new Set<string>();
+	let prdTouched = false;
+	let longSessionNudged = false;
+	const destructiveNudged = new Set<string>();
+
+	pi.on("session_start", () => {
+		toolCalls = 0;
+		editedFiles.clear();
+		prdTouched = false;
+		longSessionNudged = false;
+		destructiveNudged.clear();
+	});
 
 	pi.on("before_agent_start", (event) => {
 		isAdvisorTurn = event.prompt.trimStart().startsWith("### Session update") && event.prompt.includes("**agent**:");
+		isSubagent = event.systemPrompt.some((part) => part.includes(SUBAGENT_MARKER));
 	});
 
 	pi.on("tool_call", (event, ctx) => {
@@ -316,26 +387,57 @@ export default function algorithmGuard(pi: ExtensionAPI): void {
 			}
 			return;
 		}
+		const cwd = ctx?.cwd ?? process.cwd();
+		toolCalls += 1;
+		const touched = event.toolName === "write" && path && !path.includes("://")
+			? [path]
+			: event.toolName === "edit" ? editedPaths(input?.input) : [];
+		for (const file of touched) {
+			editedFiles.add(expandPath(file, cwd));
+			if (isRunPrdPath(file, cwd)) prdTouched = true;
+		}
 		if (event.toolName !== "write") return;
 		const content = typeof input?.content === "string" ? input.content : "";
-		if (!path || !isRunPrdPath(path, ctx?.cwd ?? process.cwd())) return;
+		if (!path || !isRunPrdPath(path, cwd)) return;
 		const errors = validatePrd(content);
 		if (errors.length > 0) return { block: true, reason: GUARD_PREFIX + errors.join("\n- ") };
 	});
 
 	pi.on("tool_result", (event, ctx) => {
-		if (event.toolName !== "edit" || event.isError) return;
+		if (isAdvisorTurn) return;
 		const cwd = ctx?.cwd ?? process.cwd();
-		const errors = editedPaths(event.input?.input)
-			.filter((path) => isRunPrdPath(path, cwd))
-			.flatMap((path) => {
-				const absolute = expandPath(path, cwd);
-				return existsSync(absolute) ? validatePrd(readFileSync(absolute, "utf8")) : [];
-			});
-		if (errors.length === 0) return;
+		const input = event.input as Record<string, unknown> | undefined;
+		const errors = event.toolName === "edit" && !event.isError
+			? editedPaths(input?.input)
+				.filter((path) => isRunPrdPath(path, cwd))
+				.flatMap((path) => {
+					const absolute = expandPath(path, cwd);
+					return existsSync(absolute) ? validatePrd(readFileSync(absolute, "utf8")) : [];
+				})
+			: [];
+
+		const nudges: string[] = [];
+		if (!isSubagent && !event.isError) {
+			const label = destructiveOp(event.toolName, input);
+			if (label && !destructiveNudged.has(label) && !hasActivePrd()) {
+				destructiveNudged.add(label);
+				nudges.push(`${NUDGE_PREFIX} выполнена разрушающая операция — ${label}, а активного PRD Algorithm нет. Что принадлежало этому ресурсу по данным его authority (API провайдера, каталог БД)? Перечисли это заново у источника истины, не через кеш, и проверь, что поток, который ресурс обслуживал, идёт на уровне baseline. Если работа продолжается — это задача для skill://algorithm.`);
+			}
+			const deep = toolCalls >= nudgeCalls || editedFiles.size >= nudgeFiles;
+			if (deep && !longSessionNudged && !prdTouched && !hasActivePrd()) {
+				longSessionNudged = true;
+				nudges.push(`${NUDGE_PREFIX} в сессии уже ${toolCalls} вызовов инструментов и ${editedFiles.size} изменённых файлов, а PRD Algorithm не заведён. Задача всё ещё мелкая — или «готово» пора записать в PRD (skill://algorithm)?`);
+			}
+		}
+
+		if (errors.length === 0 && nudges.length === 0) return;
+		const notes = [
+			...(errors.length ? [`${GUARD_PREFIX}${errors.join("\n- ")}\nПравка применена; исправь PRD следующей правкой.`] : []),
+			...nudges,
+		];
 		return {
-			content: [...event.content, { type: "text", text: `\n${GUARD_PREFIX}${errors.join("\n- ")}\nПравка применена; исправь PRD следующей правкой.` }],
-			isError: true,
+			content: [...event.content, { type: "text", text: `\n${notes.join("\n\n")}` }],
+			...(errors.length ? { isError: true } : {}),
 		};
 	});
 
