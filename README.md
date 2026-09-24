@@ -16,6 +16,7 @@
 | [`deep-research`](deep-research/) | Многоракурсный веб-ресёрч в четыре фазы: разведка, углубление по измерениям, набор разных типов свидетельств, проверка полноты. Штатный поставщик данных для `consulting-analysis` |
 | [`chart-visualization`](chart-visualization/) | Каталог 26 типов графиков: выбор уместного типа под характер данных и спецификация обязательных полей для каждого. Рендер — локальными средствами |
 | [`newsletter-generation`](newsletter-generation/) | Дайджесты и рассылки: структуры под четыре формата, критерии отбора материалов, калибровка тона под аудиторию, чек-лист перед отправкой |
+| [`algorithm`](algorithm/) | Algorithm v4.0: рискованная или крупная работа через PRD с проверяемыми критериями, доказательствами и независимой проверкой. В комплекте extension `algorithm-guard`, которое блокирует невалидные PRD |
 
 ## Структура
 
@@ -45,8 +46,11 @@
 ├── chart-visualization/
 │   ├── SKILL.md
 │   └── references/          # 26 спецификаций типов графиков, переведены на русский
-└── newsletter-generation/
-    └── SKILL.md
+├── newsletter-generation/
+│   └── SKILL.md
+└── algorithm/
+    ├── SKILL.md
+    └── extension/          # algorithm-guard.ts (symlink в ~/.omp/agent/extensions) + тест
 ```
 
 Скиллы связаны в конвейер аналитики: `consulting-analysis` строит каркас с требованиями к данным → `deep-research` и `data-analysis` собирают факты и числа → `chart-visualization` выбирает типы графиков → рендер локальными средствами → `consulting-analysis` собирает финальный отчёт. Академическая доказательная база при необходимости приходит из `systematic-literature-review` и `academic-paper-review`. `newsletter-generation` использует тот же сбор через `deep-research`, но упаковывает результат не в отчёт, а в выпуск рассылки.
