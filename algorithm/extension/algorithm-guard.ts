@@ -136,7 +136,7 @@ export function validatePrd(text: string): string[] {
 				errors.push(`effort ${effort}: complete требует verified_by от проверяющего (reviewer:<id> | loop_validate | user)`);
 			}
 		}
-		if (fm.verified_by === "loop_validate") errors.push(...validateLoopAttestation(fm));
+		if (/^(xd:\/\/)?loop_validate$/i.test(fm.verified_by?.trim() ?? "")) errors.push(...validateLoopAttestation(fm));
 
 		if (fm.isa) errors.push(...validateIsaReports(fm));
 	}
@@ -229,15 +229,17 @@ function validateLoopAttestation(fm: Record<string, string>): string[] {
 
 	const runsRoot = join(repo, ".omp", "runtime", "engineering-loop");
 	const matching: string[] = [];
-	if (existsSync(runsRoot)) {
-		for (const entry of readdirSync(runsRoot)) {
-			const dir = join(runsRoot, entry);
-			try {
-				if (!statSync(dir).isDirectory()) continue;
-				const state = JSON.parse(readFileSync(join(dir, "state.json"), "utf8")) as { candidateCommit?: string };
-				if (state.candidateCommit === commit) matching.push(dir);
-			} catch { /* не каталог прогона или без state.json — пропускаем */ }
-		}
+	let entries: string[] = [];
+	try {
+		entries = readdirSync(runsRoot);
+	} catch { /* нет каталога прогонов или он нечитаем — ниже «нет прогона» */ }
+	for (const entry of entries) {
+		const dir = join(runsRoot, entry);
+		try {
+			if (!statSync(dir).isDirectory()) continue;
+			const state = JSON.parse(readFileSync(join(dir, "state.json"), "utf8")) as { candidateCommit?: string };
+			if (state.candidateCommit === commit) matching.push(dir);
+		} catch { /* не каталог прогона или без state.json — пропускаем */ }
 	}
 	if (matching.length === 0) {
 		return [`loop_validate: нет прогона engineering-loop с кандидатом ${commit} в ${repo}`];
