@@ -1,6 +1,7 @@
 // Запуск: bun ~/.omp/agent/skills/algorithm/extension/algorithm-guard.test.mjs
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -93,6 +94,59 @@ try {
 	assert.ok(validatePrd(advanced(undefined)).some((e) => e.includes("verified_by")));
 	assert.ok(validatePrd(advanced("self")).some((e) => e.includes("verified_by")));
 	assert.deepEqual(validatePrd(advanced("reviewer:PrdReviewer")), []);
+
+	// --- verified_by: loop_validate — цепочка артефактов engineering-loop ---
+	const loopRepo = join(home, "loop-repo");
+	const loopRuns = join(loopRepo, ".omp", "runtime", "engineering-loop");
+	const LOOP_COMMIT = "a".repeat(40);
+	const OTHER_COMMIT = "b".repeat(40);
+	const TOKEN_A = "tok-loopA-Zz"; // имя каталога прогона — токен: не должно попадать в ошибки
+	const TOKEN_B = "tok-loopB-Zz";
+	const sha256 = (text) => createHash("sha256").update(text).digest("hex");
+	const writeJsonNl = (file, value) => writeFileSync(file, `${JSON.stringify(value, null, 2)}\n`);
+	const writeLoopRun = (token, commit) => {
+		const dir = join(loopRuns, token);
+		mkdirSync(dir, { recursive: true });
+		writeJsonNl(join(dir, "state.json"), { candidateCommit: commit, status: "finalized" });
+		const evidenceFile = join(dir, "evidence.json");
+		writeJsonNl(evidenceFile, { token, candidateCommit: commit, exitCode: 0, passed: true });
+		const evidenceHash = sha256(readFileSync(evidenceFile, "utf8"));
+		writeJsonNl(join(dir, "attestation.json"), { verdict: "PASS", candidateCommit: commit, evidenceHash });
+		const reviewFile = join(dir, "review.json");
+		writeJsonNl(reviewFile, { token, candidateCommit: commit, evidenceHash, verdict: "approved", summary: "ok" });
+		writeJsonNl(join(dir, "review-attestation.json"), { verdict: "APPROVED", candidateCommit: commit, reviewHash: sha256(readFileSync(reviewFile, "utf8")) });
+	};
+	const loopPrd = (fm) => complete({ ...base, fm: { verified_by: "loop_validate", loop_repo: loopRepo, loop_commit: LOOP_COMMIT, ...fm } });
+
+	assert.ok(validatePrd(loopPrd({ loop_repo: undefined, loop_commit: undefined })).some((e) => e.includes("loop_repo")));
+	assert.ok(validatePrd(loopPrd({ loop_commit: undefined })).some((e) => e.includes("loop_commit")));
+	assert.ok(validatePrd(loopPrd({ loop_repo: "repo/relative" })).some((e) => e.includes("абсолютным")));
+	assert.ok(validatePrd(loopPrd({ loop_commit: "abc123" })).some((e) => e.includes("40-hex")));
+	const noRun = validatePrd(loopPrd({}));
+	assert.ok(noRun.some((e) => e.includes("нет прогона")), noRun.join("|"));
+	writeLoopRun(TOKEN_A, LOOP_COMMIT);
+	assert.deepEqual(validatePrd(loopPrd({})), []);
+	// Второй битый прогон на тот же коммит не отменяет валидный.
+	writeLoopRun(TOKEN_B, LOOP_COMMIT);
+	writeFileSync(join(loopRuns, TOKEN_B, "evidence.json"), "{broken");
+	assert.deepEqual(validatePrd(loopPrd({})), []);
+	// Подменённый evidence: хеши в attestation и review расходятся с байтами файла — reject в обоих прогонах.
+	writeJsonNl(join(loopRuns, TOKEN_A, "evidence.json"), { token: TOKEN_A, candidateCommit: LOOP_COMMIT, exitCode: 1, passed: true });
+	const tampered = validatePrd(loopPrd({}));
+	assert.ok(tampered.some((e) => e.includes("attestation.json")), tampered.join("|"));
+	writeLoopRun(TOKEN_A, LOOP_COMMIT);
+	rmSync(join(loopRuns, TOKEN_A, "review-attestation.json"));
+	rmSync(join(loopRuns, TOKEN_B, "review-attestation.json"));
+	assert.ok(validatePrd(loopPrd({})).some((e) => e.includes("review-attestation.json")));
+	writeLoopRun(TOKEN_A, LOOP_COMMIT);
+	writeLoopRun(TOKEN_B, LOOP_COMMIT);
+	const wrongCommit = validatePrd(loopPrd({ loop_commit: OTHER_COMMIT }));
+	assert.ok(wrongCommit.some((e) => e.includes("нет прогона")), wrongCommit.join("|"));
+	for (const errs of [noRun, tampered, wrongCommit]) {
+		for (const e of errs) {
+			assert.ok(!e.includes(TOKEN_A) && !e.includes(TOKEN_B), e);
+		}
+	}
 
 	// partial/blocked/abandoned требуют Outcome.
 	assert.ok(validatePrd(prd({ fm: { phase: "blocked" }, criteria: [[false, "ISC-1"]] })).some((e) => e.includes("## Outcome")));

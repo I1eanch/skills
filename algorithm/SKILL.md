@@ -62,7 +62,7 @@ Algorithm переводит систему из текущего состоян
    - subagent `reviewer`, запущенный заново, а не форк текущего контекста: форк унаследовал рассуждения автора и защищает его работу. В задании ревьюеру заново перечисли `stated_goal`, критерии, путь к PRD и diff;
    - `xd://loop_validate`, если работа идёт в engineering-loop;
    - пользователь, если проверка требует его доступа.
-3. Запиши во frontmatter `verified_by: reviewer:<id>`, `loop_validate` или `user`.
+3. Запиши во frontmatter `verified_by: reviewer:<id>`, `loop_validate` или `user`. Когда изменение прошло через engineering-loop, `verified_by: loop_validate`, и кроме дословной цели и `## Ask Check` PRD хранит `loop_repo` (абсолютный путь к основному чекауту репозитория) и `loop_commit` (SHA кандидата, подтверждённого `loop_validate`): guard проверяет цепочку evidence → attestation → review этого прогона. Имя каталога прогона — сам токен и в PRD не записывается.
 4. **ISA проекта.** Если задан `isa:`, прогони весь ISA, без `--only`: `isa-check.ts <isa> --baseline <isa_baseline>`, и запиши путь отчёта в `isa_final:`. Всё, что проходило в baseline, должно проходить и сейчас: упавшее — регрессия, не запущенное — «не перепроверено»; и то и другое блокирует `complete`: чини или объясняй в `## Outcome` с `partial`. Утверждения ISA, которые задача довела до выполнения, отметь `[x]` в самом `ISA.md`.
    Запускай этот прогон в фоне (`bash` с `async: true`) и параллельно делай attestation и Ask Check: проверки с неизменёнными `inputs:` берутся из кеша, долго идут только затронутые задачей.
 5. **Ask Check** — последняя проверка перед закрытием. Перечитай сообщение пользователя дословно и внеси в `## Ask Check` каждую явную просьбу, включая указания о глубине («подробно», «быстро»):
@@ -142,6 +142,8 @@ progress: <отмечено>/<всего>
 started: <ISO 8601>
 updated: <ISO 8601>
 verified_by: <reviewer:<id> | loop_validate | user>
+loop_repo: <абсолютный путь к основному чекауту репозитория, при verified_by: loop_validate>
+loop_commit: <SHA кандидата из loop_validate, при verified_by: loop_validate>
 isa: <абсолютный путь к ISA.md проекта, если он есть>
 isa_baseline: <абсолютный путь к отчёту isa-check до работы>
 isa_final: <абсолютный путь к отчёту isa-check --baseline перед закрытием>
@@ -166,6 +168,7 @@ Extension `algorithm-guard` (исходник `extension/algorithm-guard.ts` э�
 - ID критериев не повторяются;
 - `progress` равен числу `[x]` из общего числа живых критериев;
 - `complete` требует: все живые критерии `[x]` или `[DEFERRED-VERIFY]`, каждый id встречается в `## Verification`, у каждого `[DEFERRED-VERIFY]` есть `follow-up:`, `## Ask Check` непустой, у каждой строки статус ✓ / ✗ / SKIP и нет ни одного ✗;
+- при `verified_by: loop_validate` (на любом effort) — `loop_repo` и `loop_commit` и валидная цепочка артефактов прогона: `evidence.json` с `passed`, `attestation.json` (PASS), `review.json` (approved) и `review-attestation.json` (APPROVED), где каждый хеш — sha256 байтов заверяемого файла, а `candidateCommit` — `loop_commit`;
 - `complete` для advanced и deep требует `verified_by` от проверяющего, не от автора;
 - `partial`, `blocked` и `abandoned` требуют непустой `## Outcome`.
 - если задан `isa:` — `complete` требует `isa_baseline` и `isa_final`: абсолютные пути к существующим отчётам с того же ISA, оба сняты по всему ISA без `--only`, `isa_final` снят позже и с `--baseline isa_baseline`, регрессий и неперепроверенных утверждений нет.

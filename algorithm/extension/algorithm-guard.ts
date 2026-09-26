@@ -11,7 +11,9 @@
  *   - `[DEFERRED-VERIFY]` criteria carry a `follow-up:` reference;
  *   - criterion IDs are unique (splits become ISC-N.M, drops stay as tombstones);
  *   - `progress` must match the checkboxes;
- *   - advanced/deep runs cannot self-attest completion (`verified_by`);
+ *   - advanced/deep runs cannot self-attest completion (`verified_by`), and a
+ *     `loop_validate` attestation closes only on the engineering-loop evidence
+ *     chain (`loop_repo` + `loop_commit`, never the run token);
  *   - non-complete terminal phases must explain themselves in `## Outcome`;
  *   - the Advisor role stays review-only and never enters Algorithm.
  *
@@ -23,6 +25,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, isAbsolute, join, resolve } from "node:path";
+import { createHash } from "node:crypto";
 import type { ExtensionAPI } from "@oh-my-pi/pi-coding-agent";
 
 const HOME = process.env.HOME || homedir();
@@ -40,6 +43,7 @@ const REQUIRED_FIELDS = ["task", "stated_goal", "slug", "effort", "phase", "prog
 const CRITERION = /^\s*-\s*\[( |x|X|DEFERRED-VERIFY)\]\s*(ISC-A?\d+(?:\.\d+)*)(?!\w|\.\d)\s*:?\s*(.*)$/gm;
 const ISC_ID = /\bISC-A?\d+(?:\.\d+)*(?!\w|\.\d)/g;
 const SELF_ATTESTATION = /^(self|author|me|main|primary|agent)$/i;
+const COMMIT_SHA = /^[0-9a-f]{40}$/;
 const STALE_MS = 24 * 60 * 60 * 1000;
 
 const ADVISOR_TOOLS: Record<string, true> = { read: true, grep: true, glob: true, advise: true };
@@ -132,6 +136,7 @@ export function validatePrd(text: string): string[] {
 				errors.push(`effort ${effort}: complete требует verified_by от проверяющего (reviewer:<id> | loop_validate | user)`);
 			}
 		}
+		if (fm.verified_by === "loop_validate") errors.push(...validateLoopAttestation(fm));
 
 		if (fm.isa) errors.push(...validateIsaReports(fm));
 	}
@@ -196,6 +201,87 @@ function validateIsaReports(fm: Record<string, string>): string[] {
 	if (final.regressions?.length) errors.push(`isa-check: регрессии относительно baseline: ${final.regressions.join(", ")}`);
 	if (final.notRechecked?.length) errors.push(`isa-check: проходили в baseline, но не перепроверены: ${final.notRechecked.join(", ")}`);
 	return errors;
+}
+
+/**
+ * `verified_by: loop_validate` closes only on the loop's own attestation chain:
+ * a run under `<loop_repo>/.omp/runtime/engineering-loop/` whose candidate is
+ * `loop_commit`, with evidence passed, a Checker attestation and an approved
+ * review — each verdict bound to the raw sha256 of the file it certifies, the
+ * same chain `loopctl finalize` demands. The run directory name IS the run
+ * token: errors name the commit and the failed check, never the directory.
+ */
+function validateLoopAttestation(fm: Record<string, string>): string[] {
+	const errors: string[] = [];
+	const repo = fm.loop_repo ?? "";
+	const commit = fm.loop_commit ?? "";
+	if (!repo) {
+		errors.push("`verified_by: loop_validate` требует `loop_repo` — абсолютный путь к основному чекауту репозитория");
+	} else if (!isAbsolute(repo)) {
+		errors.push("`loop_repo` должен быть абсолютным путём");
+	}
+	if (!commit) {
+		errors.push("`verified_by: loop_validate` требует `loop_commit` — SHA кандидата, подтверждённого loop_validate");
+	} else if (!COMMIT_SHA.test(commit)) {
+		errors.push("`loop_commit` должен быть 40-hex SHA коммита");
+	}
+	if (errors.length > 0) return errors;
+
+	const runsRoot = join(repo, ".omp", "runtime", "engineering-loop");
+	const matching: string[] = [];
+	if (existsSync(runsRoot)) {
+		for (const entry of readdirSync(runsRoot)) {
+			const dir = join(runsRoot, entry);
+			try {
+				if (!statSync(dir).isDirectory()) continue;
+				const state = JSON.parse(readFileSync(join(dir, "state.json"), "utf8")) as { candidateCommit?: string };
+				if (state.candidateCommit === commit) matching.push(dir);
+			} catch { /* не каталог прогона или без state.json — пропускаем */ }
+		}
+	}
+	if (matching.length === 0) {
+		return [`loop_validate: нет прогона engineering-loop с кандидатом ${commit} в ${repo}`];
+	}
+	const seen = new Set<string>();
+	for (const dir of matching) {
+		const fails = verifyLoopRun(dir, commit);
+		if (fails.length === 0) return [];
+		for (const fail of fails) seen.add(fail);
+	}
+	return [...seen].map((check) => `loop_validate ${commit}: ${check}`);
+}
+
+/** One run verified end to end; failures name the file and check, never the run. */
+function verifyLoopRun(dir: string, commit: string): string[] {
+	const read = (name: string): Record<string, unknown> | null => {
+		try {
+			return JSON.parse(readFileSync(join(dir, name), "utf8")) as Record<string, unknown>;
+		} catch {
+			return null;
+		}
+	};
+	const evidence = read("evidence.json");
+	if (evidence === null || evidence.passed !== true || evidence.candidateCommit !== commit) {
+		return ["нет evidence.json с passed по этому кандидату"];
+	}
+	const evidenceHash = createHash("sha256").update(readFileSync(join(dir, "evidence.json"))).digest("hex");
+	const attestation = read("attestation.json");
+	if (attestation === null || attestation.verdict !== "PASS"
+		|| attestation.candidateCommit !== commit || attestation.evidenceHash !== evidenceHash) {
+		return ["attestation.json не подтверждает evidence (verdict PASS, evidenceHash)"];
+	}
+	const review = read("review.json");
+	if (review === null || review.verdict !== "approved"
+		|| review.candidateCommit !== commit || review.evidenceHash !== evidenceHash) {
+		return ["нет review.json с approved по этому evidence"];
+	}
+	const reviewHash = createHash("sha256").update(readFileSync(join(dir, "review.json"))).digest("hex");
+	const reviewAttestation = read("review-attestation.json");
+	if (reviewAttestation === null || reviewAttestation.verdict !== "APPROVED"
+		|| reviewAttestation.candidateCommit !== commit || reviewAttestation.reviewHash !== reviewHash) {
+		return ["review-attestation.json не подтверждает review (verdict APPROVED, reviewHash)"];
+	}
+	return [];
 }
 
 // --- Path helpers ----------------------------------------------------------------
